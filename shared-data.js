@@ -2,6 +2,9 @@
 // どの画面でExcel/CSVを読み込んでも、そのファイルをブラウザに保存しておき、
 // 他の画面を開いたときに自動で同じファイルを読み込ませる。
 (function () {
+    const APP_SCOPE = (typeof location !== 'undefined' && location.pathname)
+        ? location.pathname.replace(/\/[^/]*$/, '/')
+        : '/';
     const KEY = 'tb-shared-files';
     const IS_DASHBOARD = !!document.getElementById('export-app-btn');
     // 閲覧アプリ（viewer）では、母体が書き出した data.json のファイルを使う
@@ -71,7 +74,7 @@
 
     // 複数ファイルを1つのワークブックにまとめる（1ファイルしか読めない画面用・合算結果キャッシュ対応）
     const HEADER_WORDS = ['PLAY TYPE', 'OFF FORM', 'PERSONNEL', 'HASH', 'ZONE', 'DN', 'DIST', 'OFF PLAY'];
-    const MERGED_CACHE_KEY = 'tb-merged-xlsx-cache';
+    const MERGED_CACHE_KEY = 'tb-merged-xlsx-cache:' + APP_SCOPE;
     function findHeaderRow(rows) {
         for (let i = 0; i < Math.min(rows.length, 20); i++) {
             const cells = (rows[i] || []).map(c => String(c ?? '').trim().toUpperCase());

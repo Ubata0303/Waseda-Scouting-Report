@@ -295,7 +295,7 @@ body {
         <img id="photo-modal-img" src="" alt="Cadence Field View">
     </div>
 
-    <script src="scouting-extra.js"></script>
+    <script src="scouting-extra.js?v=20261121b"></script>
     <script>
 (function () {
     let extraData = window.TBScoutingExtra.getExtraData();
@@ -335,7 +335,14 @@ body {
                 if (showHeadline) {
                     const h2 = document.createElement('h2');
                     h2.className = 'cadence-headline';
-                    h2.innerHTML = window.TBScoutingExtra.formatRichText(page.headline);
+                    const hLines = String(page.headline || '').split('\n').map(s => s.trim()).filter(Boolean);
+                    if (hLines.length > 1) {
+                        const subHtml = hLines.slice(0, -1).map(l => `<div style="font-size:1.25rem;color:#111827;margin-bottom:0.35rem;">${window.TBScoutingExtra.formatRichText(l)}</div>`).join('');
+                        const mainHtml = `<div>${window.TBScoutingExtra.formatRichText(hLines[hLines.length - 1])}</div>`;
+                        h2.innerHTML = subHtml + mainHtml;
+                    } else {
+                        h2.innerHTML = window.TBScoutingExtra.formatRichText(page.headline);
+                    }
                     headerDiv.appendChild(h2);
                 }
                 pageCard.appendChild(headerDiv);
@@ -354,8 +361,9 @@ body {
             (page.items || []).forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'cadence-item';
+                const cleanHead = (item.heading && item.heading !== '■概要') ? item.heading : '';
                 div.innerHTML = `
-                    <div class="cadence-item-heading">${window.TBScoutingExtra.formatRichText(item.heading)}</div>
+                    ${cleanHead ? `<div class="cadence-item-heading">${window.TBScoutingExtra.formatRichText(cleanHead)}</div>` : ''}
                     <div class="cadence-item-body">${window.TBScoutingExtra.formatRichText(item.body)}</div>
                 `;
                 itemsDiv.appendChild(div);

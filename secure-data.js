@@ -4,8 +4,12 @@
 // 暗号化：PBKDF2-SHA256（ランダムなsalt）で鍵を作り、AES-GCM（ランダムなIV）で暗号化
 (function () {
     const ITERATIONS = 100000;
-    const PASS_KEY = 'tb-viewer-pass'; // 「この端末に保存」したときのみ使用
-    const CHECK_TS_KEY = 'tb-last-head-check';
+    const APP_SCOPE = (typeof location !== 'undefined' && location.pathname)
+        ? location.pathname.replace(/\/[^/]*$/, '/')
+        : '/';
+    const PASS_KEY = 'tb-viewer-pass:' + APP_SCOPE; // フォルダ（チーム）ごとに独立保存
+    const LEGACY_PASS_KEY = 'tb-viewer-pass';
+    const CHECK_TS_KEY = 'tb-last-head-check:' + APP_SCOPE;
 
     // ---------- 暗号化・復号 ----------
     function toB64(bytes) {
@@ -135,8 +139,8 @@
         });
     }
 
-    // ---------- 閲覧アプリ：data.json の取得（高速キャッシュ対応） ----------
-    const CACHE_DB = 'tb-viewer-cache-db';
+    // ---------- 閲覧アプリ：data.json の取得（高速キャッシュ対応・チーム別完全分離） ----------
+    const CACHE_DB = 'tb-viewer-cache-db:' + APP_SCOPE;
     const CACHE_STORE = 'cache';
 
     function openCacheDb() {
@@ -181,7 +185,12 @@
     }
 
     function getSaved() {
-        try { return sessionStorage.getItem(PASS_KEY) || localStorage.getItem(PASS_KEY); } catch (e) { return null; }
+        try {
+            return sessionStorage.getItem(PASS_KEY) ||
+                localStorage.getItem(PASS_KEY) ||
+                sessionStorage.getItem(LEGACY_PASS_KEY) ||
+                localStorage.getItem(LEGACY_PASS_KEY);
+        } catch (e) { return null; }
     }
     function savePass(pw, persist) {
         try {
@@ -190,7 +199,12 @@
         } catch (e) { /* 保存できなくても表示は続ける */ }
     }
     function logout() {
-        try { sessionStorage.removeItem(PASS_KEY); localStorage.removeItem(PASS_KEY); } catch (e) { }
+        try {
+            sessionStorage.removeItem(PASS_KEY);
+            localStorage.removeItem(PASS_KEY);
+            sessionStorage.removeItem(LEGACY_PASS_KEY);
+            localStorage.removeItem(LEGACY_PASS_KEY);
+        } catch (e) { }
         cacheClear();
         location.reload();
     }
