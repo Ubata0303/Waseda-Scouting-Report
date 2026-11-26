@@ -7,6 +7,7 @@
         { href: 'dd.html', label: 'Down & Distance' },
         { href: 'personnel.html', label: 'Personnel' },
         { href: 'formation.html', label: 'Formation' },
+        { href: 'livereport.html', label: 'Live Report' },
         { href: 'play.html', label: 'Play Diagram' },
         { href: 'member.html', label: 'Member List' },
         { href: 'cadence.html', label: 'Cadence' }

@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-DV549S8BY1"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-DV549S8BY1');
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Report - Scouting Report</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg: #F8FAFC;
+      --card-bg: #FFFFFF;
+      --card-border: #E2E8F0;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --text-light: #94A3B8;
+      --gold: #D97706;
+      --gold-dark: #B45309;
+      --run-red: #E05244;
+      --pass-blue: #3B82F6;
+      --green: #10B981;
+      --green-dark: #059669;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      padding: 1.5rem 1rem 60px;
+      min-height: 100vh;
+    }
+
+    /* Tendency Breaker 共通ナビ */
+    .tb-nav {
+      max-width: 1220px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 0 auto 1rem;
+      font-family: 'Inter', -apple-system, sans-serif;
+    }
+    .tb-nav a {
+      padding: 8px 14px;
+      border-radius: 8px;
+      text-decoration: none;
+      color: #475569;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .tb-nav a.active {
+      background: #3b82f6;
+      color: #fff;
+      border-color: #3b82f6;
+    }
+
+    /* Page Layout */
+    .page-container {
+      max-width: 1220px;
+      margin: 0 auto;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .page-title-group h1 {
+      font-size: 1.65rem;
+      font-weight: 800;
+      color: #0F172A;
+      letter-spacing: -0.02em;
+    }
+    .page-title-group p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .status-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .status-indicator .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10B981;
+    }
+    .file-upload-link {
+      color: #3B82F6;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+      margin-left: 4px;
+    }
+    .file-upload-link:hover { color: #1D4ED8; }
+    .btn-reset-link {
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: 6px;
+      padding: 4px 10px;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-reset-link:hover { background: #F1F5F9; color: var(--text-main); }
+
+    .scout-card {
+      background: #FFFFFF;
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 22px 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
+
+    /* 3-Row Filter Bar */
+    .filter-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 22px;
+      font-size: 13.5px;
+    }
+    .filter-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px 18px;
+    }
+    .filter-section {
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .filter-name {
+      color: #64748B;
+      font-size: 13px;
+      font-weight: 700;
+      margin-right: 3px;
+    }
+    .pill {
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      color: #334155;
+      padding: 5px 15px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.1s ease;
+      line-height: 1.2;
+    }
+    .pill:hover {
+      border-color: #94A3B8;
+      background: #F8FAFC;
+    }
+    .pill.active {
+      background: #D97706;
+      border-color: #D97706;
+      color: #FFFFFF;
+      font-weight: 700;
+    }
+
+    .tag-formation-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #FEF3C7;
+      border: 1px solid #F59E0B;
+      color: #92400E;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+    }
+    .tag-formation-pill .close {
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      margin-left: 2px;
+    }
+
+    /* 4 KPI Cards */
+    .kpi-container {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .kpi-card {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 16px;
+      padding: 18px 20px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+    }
+    .kpi-number {
+      font-size: 32px;
+      font-weight: 800;
+      color: #0F172A;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 4px;
+    }
+    .kpi-desc {
+      font-size: 12px;
+      color: #64748B;
+      font-weight: 600;
+    }
+
+    /* Insight Banner */
+    .insight-stripe {
+      border-left: 3px solid var(--gold);
+      padding: 4px 0 4px 12px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: #374151;
+      line-height: 1.5;
+    }
+    .insight-stripe b { color: #111827; }
+
+    /* 2x2 Tables Grid */
+    .tables-grid-box {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 960px) {
+      .tables-grid-box { grid-template-columns: 1fr; }
+      .kpi-container { grid-template-columns: 1fr 1fr; gap: 10px; }
+      body { padding: 12px 10px 48px; }
+      .scout-card { padding: 16px 14px; }
+    }
+
+    .table-panel-card {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 16px;
+      padding: 20px 22px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .th-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .th-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0F172A;
+      letter-spacing: -0.01em;
+    }
+    .th-meta {
+      font-size: 12px;
+      color: #64748B;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .th-legend-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: #475569;
+    }
+    .dot-r { width: 8px; height: 8px; border-radius: 2px; background: #E05244; }
+    .dot-p { width: 8px; height: 8px; border-radius: 2px; background: #3B82F6; }
+
+    .row-entries {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .table-entry {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      min-height: 28px;
+    }
+    .entry-label {
+      width: 145px;
+      flex-shrink: 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: #0F172A;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #rowsForm .entry-label {
+      width: 190px;
+      font-size: 13.5px;
+    }
+    #rowsRuns .entry-label,
+    #rowsPasses .entry-label {
+      width: 165px;
+    }
+    @media (max-width: 600px) {
+      .entry-label { width: 115px; font-size: 12.5px; }
+      #rowsForm .entry-label { width: 135px; font-size: 12.5px; }
+      #rowsRuns .entry-label,
+      #rowsPasses .entry-label { width: 125px; font-size: 12.5px; }
+      .table-panel-card { padding: 14px 12px; }
+    }
+    .clickable-entry {
+      cursor: pointer;
+      border-radius: 6px;
+      padding: 3px 6px;
+      margin: 0 -6px;
+      transition: background 0.15s;
+    }
+    .clickable-entry:hover { background: #EEF2F6; }
+    .clickable-entry.selected { background: #FEF3C7; }
+
+    .entry-bar-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      margin: 0 10px 0 6px;
+      min-width: 60px;
+    }
+    .ratio-stack-bar {
+      width: 100%;
+      height: 24px;
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+      background: #E2E8F0;
+    }
+    .ratio-run {
+      background-color: var(--run-red);
+      color: #FFFFFF;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      transition: width 0.2s ease;
+      overflow: hidden;
+    }
+    .ratio-pass {
+      background-color: var(--pass-blue);
+      color: #FFFFFF;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 8px;
+      height: 100%;
+      transition: width 0.2s ease;
+      overflow: hidden;
+    }
+    .ratio-run.striped {
+      background-color: #E88982;
+      background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.4), rgba(255,255,255,0.4) 4px, transparent 4px, transparent 8px);
+    }
+    .ratio-pass.striped {
+      background-color: #7CA8EC;
+      background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.4), rgba(255,255,255,0.4) 4px, transparent 4px, transparent 8px);
+    }
+
+    .entry-count-meta {
+      width: 82px;
+      flex-shrink: 0;
+      text-align: right;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #475569;
+      font-variant-numeric: tabular-nums;
+    }
+    .badge-less {
+      border: 1.5px solid #C28800;
+      background: #FFFFFF;
+      color: #B45309;
+      font-size: 10.5px;
+      padding: 1px 6px;
+      border-radius: 9999px;
+      font-weight: 700;
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+
+    .single-freq-bar {
+      width: 100%;
+      height: 18px;
+      background: #E2E8F0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .single-freq-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.2s ease;
+    }
+    .fill-run { background: var(--run-red); }
+    .fill-pass { background: var(--pass-blue); }
+
+    .play-metrics {
+      width: 90px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+    .play-times { font-weight: 700; color: #1E293B; }
+    .play-average { color: #64748B; }
+
+    .clips-box {
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 1px solid #F1F5F9;
+    }
+    .clips-title {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    .clips-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .clip-badge {
+      font-size: 11px;
+      padding: 2px 7px;
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: 4px;
+      color: #475569;
+      font-family: monospace;
+      font-variant-numeric: tabular-nums;
+    }
+    .clip-badge.more {
+      background: transparent;
+      border: none;
+      color: #94A3B8;
+      font-family: inherit;
+    }
+  </style>
+</head>
+<body data-mode="viewer">
+  <nav class="tb-nav">
+    <a href="index.html">Dashboard</a>
+    <a href="passzone.html">Pass Zone</a>
+    <a href="dd.html">Down &amp; Distance</a>
+    <a href="personnel.html">Personnel</a>
+    <a href="formation.html">Formation</a>
+    <a href="livereport.html" class="active">Live Report</a>
+    <a href="play.html">Play Diagram</a>
+    <a href="member.html">Member List</a>
+    <a href="cadence.html">Cadence</a>
+  </nav>
+
+  <!-- 共有データ自動流し込み用の隠しファイル入力（複数試合Excel対応） -->
+  <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" multiple style="display:none">
+
+  <div class="page-container">
+    <div class="page-header">
+      <div class="page-title-group">
+        <h1>Live Report</h1>
+        <p>複数条件の掛け合わせ・フォーメーション選択によるリアルタイム傾向分析</p>
+      </div>
+      <div class="status-header">
+        <div class="status-indicator">
+          <span class="live-dot"></span>
+          <span id="liveStatusText">データ待機中...</span>
+          <span class="file-upload-link" id="btnUploadExcel">（Excelを選択）</span>
+        </div>
+        <button class="btn-reset-link" id="btnReset">✕ 条件リセット</button>
+      </div>
+    </div>
+
+    <!-- Main Card -->
+    <div class="scout-card">
+      <!-- Filter Bar (3-Row Layout) -->
+      <div class="filter-bar">
+        <!-- 1行目: Game -->
+        <div class="filter-row">
+          <div class="filter-section">
+            <span class="filter-name">Game</span>
+            <div id="gamePillsBox" style="display:inline-flex;gap:4px;flex-wrap:wrap;"></div>
+          </div>
+        </div>
+
+        <!-- 2行目: Down, Distance -->
+        <div class="filter-row">
+          <div class="filter-section">
+            <span class="filter-name">Down</span>
+            <button class="pill" data-group="down" data-value="1">1st</button>
+            <button class="pill" data-group="down" data-value="2">2nd</button>
+            <button class="pill" data-group="down" data-value="3,4">3rd / 4th</button>
+          </div>
+
+          <div class="filter-section">
+            <span class="filter-name">Distance</span>
+            <button class="pill" data-group="dist" data-value="1-3">1-3</button>
+            <button class="pill" data-group="dist" data-value="4-6">4-6</button>
+            <button class="pill" data-group="dist" data-value="7+">7+</button>
+          </div>
+        </div>
+
+        <!-- 3行目: Personnel, 系統, 選択中のフォーメーション -->
+        <div class="filter-row">
+          <div class="filter-section" id="secPersonnel">
+            <span class="filter-name">Personnel</span>
+            <div id="personnelPillsBox" style="display:inline-flex;gap:4px;flex-wrap:wrap;"></div>
+          </div>
+
+          <div class="filter-section">
+            <span class="filter-name">系統</span>
+            <button class="pill" data-group="family" data-value="heavy">ヘビー</button>
+            <button class="pill" data-group="family" data-value="spread">スプレッド</button>
+          </div>
+
+          <div class="filter-section" id="wrapSelectedForm" style="display:none;">
+            <span class="filter-name">フォーメーション</span>
+            <div class="tag-formation-pill">
+              <span id="labelFormName"></span>
+              <span class="close" id="btnRemoveForm">&times;</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 KPI Cards -->
+      <div class="kpi-container">
+        <div class="kpi-card">
+          <div class="kpi-number" id="kpiSnaps">0</div>
+          <div class="kpi-desc">スナップ</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-number" id="kpiRunPct">0%</div>
+          <div class="kpi-desc">ラン</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-number" id="kpiGainPerPlay">0.0</div>
+          <div class="kpi-desc">ヤード / プレー</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-number" id="kpiTopCall" style="font-size:24px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">-</div>
+          <div class="kpi-desc" id="kpiTopCallDesc">最多コール</div>
+        </div>
+      </div>
+
+      <!-- Insight Box -->
+      <div class="insight-stripe" id="insightBox">
+        データを読み込んでいます...
+      </div>
+
+      <!-- 2x2 Tables Box -->
+      <div class="tables-grid-box">
+        <!-- Card 1: Down & Distance -->
+        <div class="table-panel-card">
+          <div class="th-header">
+            <div class="th-title">ダウン&amp;ディスタンス別のラン／パス</div>
+            <div class="th-meta">
+              <span class="th-legend-dot"><span class="dot-r"></span>ラン</span>
+              <span class="th-legend-dot"><span class="dot-p"></span>パス</span>
+            </div>
+          </div>
+          <div class="row-entries" id="rowsDD"></div>
+        </div>
+
+        <!-- Card 2: Formation -->
+        <div class="table-panel-card">
+          <div class="th-header">
+            <div class="th-title">フォーメーション別</div>
+            <div class="th-meta">行をタップして絞り込み</div>
+          </div>
+          <div class="row-entries" id="rowsForm"></div>
+        </div>
+
+        <!-- Card 3: Top Runs -->
+        <div class="table-panel-card">
+          <div class="th-header">
+            <div class="th-title">上位のラン</div>
+            <div class="th-meta">回数・1回当たりヤード</div>
+          </div>
+          <div class="row-entries" id="rowsRuns"></div>
+        </div>
+
+        <!-- Card 4: Top Passes -->
+        <div class="table-panel-card">
+          <div class="th-header">
+            <div class="th-title">上位のパス</div>
+            <div class="th-meta">回数・1回当たりヤード</div>
+          </div>
+          <div class="row-entries" id="rowsPasses"></div>
+        </div>
+      </div>
+
+      <!-- Bottom Clips List -->
+      <div class="clips-box">
+        <div class="clips-title" id="clipsTitle">この表示の元になった映像</div>
+        <div class="clips-badges" id="clipsList"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+"use strict";
+
+let RAW_DATA = [];
+
+const FILTER_STATE = {
+  games: new Set(),
+  downs: new Set(),
+  dists: new Set(),
+  personnel: new Set(),
+  family: new Set(),
+  formation: null
+};
+
+const EXCEL_MAP = {
+  "OF PLAY#": "play",
+  "ODK": "odk",
+  "QTR": "qtr",
+  "DN": "dn",
+  "DIST": "dist",
+  "YARD LN": "yard_ln",
+  "HASH": "hash",
+  "PERSONNEL": "personnel",
+  "OFF FORM": "form",
+  "MOTION": "motion",
+  "OFF PLAY": "off_play",
+  "PLAY TYPE": "type",
+  "RESULT": "result",
+  "GN/LS": "gain",
+  "DEF FRONT": "front",
+  "COVERAGE": "coverage",
+  "BLITZ": "blitz",
+  "OPP TEAM": "opp_team"
+};
+
+const HEADER_KEYWORDS = ["PLAY TYPE", "OFF FORM", "PERSONNEL", "HASH", "DN", "DIST", "OFF PLAY", "OPP TEAM"];
+
+function findHeaderRowIndex(rows) {
+  for (let i = 0; i < Math.min(rows.length, 20); i++) {
+    const cells = (rows[i] || []).map(c => String(c ?? "").trim().toUpperCase());
+    const matches = cells.filter(c => HEADER_KEYWORDS.some(w => c.includes(w))).length;
+    if (matches >= 2) return i;
+  }
+  return 0;
+}
+
+function normalizePlayType(rawType) {
+  const v = String(rawType ?? "").trim();
+  if (!v) return "";
+  // Live Report専用ルール: RPO(Run) -> Run, RPO(Pass) -> Pass
+  if (/RUN/i.test(v)) return "Run";
+  if (/PASS/i.test(v)) return "Pass";
+  return v;
+}
+
+const fileInput = document.getElementById("fileInput");
+const btnUploadExcel = document.getElementById("btnUploadExcel");
+if (document.body.dataset.mode === "viewer" && btnUploadExcel) {
+  btnUploadExcel.style.display = "none";
+} else if (btnUploadExcel) {
+  btnUploadExcel.onclick = () => fileInput.click();
+}
+
+fileInput.addEventListener("change", e => {
+  const files = Array.from(e.target.files || []);
+  if (files.length) handleExcelFiles(files);
+});
+
+async function handleExcelFiles(files) {
+  if (typeof XLSX === "undefined") return;
+  try {
+    const allPlays = [];
+    for (const file of files) {
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data, { type: "array" });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+      if (!rows.length) continue;
+
+      const hIdx = findHeaderRowIndex(rows);
+      const head = (rows[hIdx] || []).map(h => String(h ?? "").trim().toUpperCase());
+      const cleanName = file.name.replace(/\.[^.]+$/, "");
+
+      rows.slice(hIdx + 1).forEach((r, idx) => {
+        if (!Array.isArray(r) || r.every(v => v === "" || v == null)) return;
+        const d = {};
+        for (const col in EXCEL_MAP) {
+          let v = "";
+          if (head.includes(col)) {
+            v = r[head.indexOf(col)];
+          } else if (col === "OPP TEAM") {
+            const oppIdx = head.findIndex(h => h === "OPP" || h === "OPPONENT" || h === "OPP TEAM" || h === "OPP_TEAM" || h === "GAME");
+            if (oppIdx >= 0) v = r[oppIdx];
+          } else if (col === "OF PLAY#") {
+            const pIdx = head.findIndex(h => h === "OF PLAY#" || h === "PLAY #" || h === "PLAY#" || h === "PLAY NO");
+            if (pIdx >= 0) v = r[pIdx];
+          } else if (col === "DN") {
+            const dnIdx = head.findIndex(h => h === "DN" || h === "DOWN");
+            if (dnIdx >= 0) v = r[dnIdx];
+          } else if (col === "DIST") {
+            const distIdx = head.findIndex(h => h === "DIST" || h === "DISTANCE");
+            if (distIdx >= 0) v = r[distIdx];
+          } else if (col === "GN/LS") {
+            const gnIdx = head.findIndex(h => h === "GN/LS" || h === "GAIN" || h === "YARDS" || h === "GAIN/LOSS");
+            if (gnIdx >= 0) v = r[gnIdx];
+          }
+          if (typeof v === "string") v = v.trim();
+          if (v == null) v = "";
+
+          if (col === "PLAY TYPE") {
+            v = normalizePlayType(v);
+          }
+          d[EXCEL_MAP[col]] = v;
+        }
+
+        // 空行や集計行（RunでもPassでもなく体型もプレー名もない行）は除外
+        if (!d.type && !d.form && !d.off_play) return;
+        if (d.type !== "Run" && d.type !== "Pass") return;
+
+        const opp = d.opp_team || cleanName || "Game";
+        d.game = opp;
+        d.opp_team = opp;
+        d.dn = Number(d.dn) || null;
+        d.dist = Number(d.dist) || null;
+        d.gain = Number(d.gain) || 0;
+        d.play = d.play || (idx + 1);
+        d.src = opp + " #" + d.play;
+
+        allPlays.push(d);
+      });
+    }
+
+    setupDataset({ plays: allPlays });
+    const statusEl = document.getElementById("liveStatusText");
+    if (statusEl) {
+      statusEl.textContent = `ライブ集計中（全 ${allPlays.length} スナップ）`;
+    }
+  } catch (err) {
+    console.error("Excel parse error:", err);
+  }
+}
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+
+function escapeJs(s) {
+  return String(s ?? "").replace(/['\\]/g, "\\$&");
+}
+
+function initUIHandlers() {
+  document.getElementById("btnReset").onclick = () => {
+    FILTER_STATE.games.clear();
+    FILTER_STATE.downs.clear();
+    FILTER_STATE.dists.clear();
+    FILTER_STATE.personnel.clear();
+    FILTER_STATE.family.clear();
+    FILTER_STATE.formation = null;
+    syncPillStates();
+    refreshView();
+  };
+
+  document.querySelectorAll(".pill[data-group]").forEach(p => {
+    p.onclick = () => {
+      const g = p.dataset.group;
+      const v = p.dataset.value;
+      const set = g === "down" ? FILTER_STATE.downs : (g === "dist" ? FILTER_STATE.dists : FILTER_STATE.family);
+      if (set.has(v)) set.delete(v);
+      else set.add(v);
+      syncPillStates();
+      refreshView();
+    };
+  });
+
+  document.getElementById("btnRemoveForm").onclick = () => {
+    FILTER_STATE.formation = null;
+    document.getElementById("wrapSelectedForm").style.display = "none";
+    refreshView();
+  };
+}
+
+function syncPillStates() {
+  document.querySelectorAll(".pill[data-group]").forEach(p => {
+    const g = p.dataset.group;
+    const v = p.dataset.value;
+    let act = false;
+    if (g === "game") act = FILTER_STATE.games.has(v);
+    else if (g === "down") act = FILTER_STATE.downs.has(v);
+    else if (g === "dist") act = FILTER_STATE.dists.has(v);
+    else if (g === "personnel") act = FILTER_STATE.personnel.has(v);
+    else if (g === "family") act = FILTER_STATE.family.has(v);
+    p.classList.toggle("active", act);
+  });
+
+  if (FILTER_STATE.formation) {
+    document.getElementById("wrapSelectedForm").style.display = "inline-flex";
+    document.getElementById("labelFormName").textContent = FILTER_STATE.formation;
+  } else {
+    document.getElementById("wrapSelectedForm").style.display = "none";
+  }
+}
+
+function setupDataset(json) {
+  const arr = json.plays || (Array.isArray(json) ? json : []);
+  const mapped = arr.map((p, idx) => {
+    const playNum = p.play || p["OF PLAY#"] || p["PLAY #"] || (idx + 1);
+    const opp = p.opp_team || p["OPP TEAM"] || p.game || "Game";
+    const type = normalizePlayType(p.type || p["PLAY TYPE"] || "");
+    const src = p.src || (opp + " #" + playNum);
+    const gain = typeof p.gain === "number" ? p.gain : (Number(p.gain || p["GN/LS"]) || 0);
+
+    const form = String(p.form || p["OFF FORM"] || "UNKNOWN").trim();
+    const personnel = String(p.personnel || "").trim();
+    const isHeavy = /^(12|21|22|13|20)/.test(personnel) || /TE|DOUBLE|I FORM|PRO|WING/i.test(form);
+
+    return {
+      game: opp,
+      play: playNum,
+      src: src,
+      odk: String(p.odk || "O").toUpperCase(),
+      dn: p.dn ? Number(p.dn) : null,
+      dist: p.dist ? Number(p.dist) : null,
+      yard_ln: p.yard_ln !== undefined ? Number(p.yard_ln) : null,
+      hash: String(p.hash || "M").toUpperCase(),
+      personnel: personnel,
+      form: form,
+      off_play: String(p.off_play || p["OFF PLAY"] || "UNKNOWN").trim(),
+      type: type,
+      gain: gain,
+      family: isHeavy ? "heavy" : "spread"
+    };
+  });
+
+  // ODK列にDやKが混在しているデータの場合はオフェンス(Oまたは空欄)のみ対象とする
+  const hasExplicitO = mapped.some(p => p.odk === "O");
+  RAW_DATA = hasExplicitO ? mapped.filter(p => !p.odk || p.odk === "O") : mapped;
+
+  // 存在しないフィルター選択状態をクリア
+  const validGames = new Set(RAW_DATA.map(p => p.game));
+  Array.from(FILTER_STATE.games).forEach(g => { if (!validGames.has(g)) FILTER_STATE.games.delete(g); });
+  const validPers = new Set(RAW_DATA.map(p => p.personnel));
+  Array.from(FILTER_STATE.personnel).forEach(pe => { if (!validPers.has(pe)) FILTER_STATE.personnel.delete(pe); });
+
+  createGamePills();
+  createPersonnelPills();
+  syncPillStates();
+  refreshView();
+}
+
+function createGamePills() {
+  const games = [...new Set(RAW_DATA.map(p => p.game).filter(Boolean))].sort();
+  const box = document.getElementById("gamePillsBox");
+  box.innerHTML = "";
+
+  games.forEach(g => {
+    const b = document.createElement("button");
+    b.className = "pill";
+    b.dataset.group = "game";
+    b.dataset.value = g;
+    b.textContent = g;
+    b.onclick = () => {
+      if (FILTER_STATE.games.has(g)) FILTER_STATE.games.delete(g);
+      else FILTER_STATE.games.add(g);
+      syncPillStates();
+      refreshView();
+    };
+    box.appendChild(b);
+  });
+}
+
+function createPersonnelPills() {
+  const sec = document.getElementById("secPersonnel");
+  const box = document.getElementById("personnelPillsBox");
+  if (!sec || !box) return;
+
+  const rawList = [...new Set(RAW_DATA.map(p => p.personnel).filter(Boolean))];
+  if (!rawList.length) {
+    sec.style.display = "none";
+    box.innerHTML = "";
+    return;
+  }
+
+  sec.style.display = "inline-flex";
+  const pList = rawList.sort((a, b) => {
+    const na = parseInt(a, 10), nb = parseInt(b, 10);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb || a.localeCompare(b);
+    return a.localeCompare(b);
+  });
+
+  box.innerHTML = "";
+  pList.forEach(p => {
+    const b = document.createElement("button");
+    b.className = "pill";
+    b.dataset.group = "personnel";
+    b.dataset.value = p;
+    b.textContent = p;
+    b.onclick = () => {
+      if (FILTER_STATE.personnel.has(p)) FILTER_STATE.personnel.delete(p);
+      else FILTER_STATE.personnel.add(p);
+      syncPillStates();
+      refreshView();
+    };
+    box.appendChild(b);
+  });
+}
+
+function filterPlays() {
+  return RAW_DATA.filter(p => {
+    if (FILTER_STATE.games.size > 0 && !FILTER_STATE.games.has(p.game)) return false;
+
+    if (FILTER_STATE.downs.size > 0) {
+      let ok = false;
+      if (FILTER_STATE.downs.has("1") && p.dn === 1) ok = true;
+      if (FILTER_STATE.downs.has("2") && p.dn === 2) ok = true;
+      if (FILTER_STATE.downs.has("3,4") && (p.dn === 3 || p.dn === 4)) ok = true;
+      if (!ok) return false;
+    }
+
+    if (FILTER_STATE.dists.size > 0) {
+      let ok = false;
+      if (FILTER_STATE.dists.has("1-3") && p.dist >= 1 && p.dist <= 3) ok = true;
+      if (FILTER_STATE.dists.has("4-6") && p.dist >= 4 && p.dist <= 6) ok = true;
+      if (FILTER_STATE.dists.has("7+") && p.dist >= 7) ok = true;
+      if (!ok) return false;
+    }
+
+    if (FILTER_STATE.personnel.size > 0 && !FILTER_STATE.personnel.has(p.personnel)) return false;
+    if (FILTER_STATE.family.size > 0 && !FILTER_STATE.family.has(p.family)) return false;
+    if (FILTER_STATE.formation && p.form !== FILTER_STATE.formation) return false;
+
+    return true;
+  });
+}
+
+function refreshView() {
+  const active = filterPlays();
+  updateKPIs(active);
+  updateInsight(active);
+  updateDDTable(active);
+  updateFormationTable(active);
+  updateTopPlays(active);
+  updateClips(active);
+}
+
+function updateKPIs(plays) {
+  const n = plays.length;
+  document.getElementById("kpiSnaps").textContent = n;
+
+  const runs = plays.filter(p => p.type === "Run").length;
+  const runPct = n ? Math.round((runs / n) * 100) : 0;
+  document.getElementById("kpiRunPct").textContent = runPct + "%";
+
+  const totalGain = plays.reduce((acc, p) => acc + p.gain, 0);
+  const avg = n ? (totalGain / n).toFixed(1) : "0.0";
+  document.getElementById("kpiGainPerPlay").textContent = avg;
+
+  const playCounts = {};
+  plays.forEach(p => {
+    if (p.off_play && p.off_play !== "UNKNOWN") {
+      playCounts[p.off_play] = (playCounts[p.off_play] || 0) + 1;
+    }
+  });
+  const sorted = Object.entries(playCounts).sort((a, b) => b[1] - a[1]);
+  if (sorted.length) {
+    document.getElementById("kpiTopCall").textContent = sorted[0][0];
+    document.getElementById("kpiTopCallDesc").textContent = `最多コール (${sorted[0][1]} 回)`;
+  } else {
+    document.getElementById("kpiTopCall").textContent = "-";
+    document.getElementById("kpiTopCallDesc").textContent = "最多コール";
+  }
+}
+
+function updateInsight(plays) {
+  const box = document.getElementById("insightBox");
+  if (!plays.length) {
+    box.innerHTML = "該当データがありません。条件を緩和してください。";
+    return;
+  }
+  const heavy = plays.filter(p => p.family === "heavy");
+  const spread = plays.filter(p => p.family === "spread");
+  const hRun = heavy.length ? Math.round((heavy.filter(p => p.type === "Run").length / heavy.length) * 100) : 0;
+  const sRun = spread.length ? Math.round((spread.filter(p => p.type === "Run").length / spread.length) * 100) : 0;
+
+  const playCounts = {};
+  plays.forEach(p => { if (p.off_play && p.off_play !== "UNKNOWN") playCounts[p.off_play] = (playCounts[p.off_play] || 0) + 1; });
+  const sorted = Object.entries(playCounts).sort((a, b) => b[1] - a[1]);
+  const topStr = sorted.length ? `。対策の最優先コールは <b>${escapeHtml(sorted[0][0])}</b> です。` : "。";
+
+  box.innerHTML = `この表示では、ヘビーセットからのランが <b>${hRun}%</b>、スプレッドからは <b>${sRun}%</b> です。ダウンよりフォーメーションのほうが多くを語ります${topStr}`;
+}
+
+function updateDDTable(plays) {
+  const configs = [
+    { label: "1st & 10", fn: p => p.dn === 1 && p.dist === 10 },
+    { label: "1st other", fn: p => p.dn === 1 && p.dist !== 10 },
+    { label: "2nd & short", fn: p => p.dn === 2 && p.dist <= 3 },
+    { label: "2nd & medium", fn: p => p.dn === 2 && p.dist >= 4 && p.dist <= 6 },
+    { label: "2nd & long", fn: p => p.dn === 2 && p.dist >= 7 },
+    { label: "3rd/4th & short", fn: p => (p.dn === 3 || p.dn === 4) && p.dist <= 3 },
+    { label: "3rd/4th & medium", fn: p => (p.dn === 3 || p.dn === 4) && p.dist >= 4 && p.dist <= 6 },
+    { label: "3rd/4th & long", fn: p => (p.dn === 3 || p.dn === 4) && p.dist >= 7 }
+  ];
+
+  const html = configs.map(c => {
+    const list = plays.filter(c.fn);
+    if (!list.length) return "";
+    const n = list.length;
+    const rCount = list.filter(p => p.type === "Run").length;
+    const rPct = Math.round((rCount / n) * 100);
+    const pPct = 100 - rPct;
+    const isThin = n < 10;
+    const stripedClass = isThin ? "striped" : "";
+
+    return `
+      <div class="table-entry">
+        <div class="entry-label">${c.label}</div>
+        <div class="entry-bar-container">
+          <div class="ratio-stack-bar">
+            ${rPct > 0 ? `<div class="ratio-run ${stripedClass}" style="width:${rPct}%">${rPct >= 14 ? rPct + "%" : ""}</div>` : ""}
+            ${pPct > 0 ? `<div class="ratio-pass ${stripedClass}" style="width:${pPct}%">${pPct >= 14 ? pPct + "%" : ""}</div>` : ""}
+          </div>
+        </div>
+        <div class="entry-count-meta">
+          <span>n=${n}</span>
+          ${isThin ? '<span class="badge-less">少ない</span>' : ""}
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  document.getElementById("rowsDD").innerHTML = html || '<div style="color:var(--text-light);font-size:12px;padding:8px 0;">データなし</div>';
+}
+
+function updateFormationTable(plays) {
+  const counts = {};
+  plays.forEach(p => { counts[p.form] = (counts[p.form] || 0) + 1; });
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+  const html = sorted.map(([form, n]) => {
+    const list = plays.filter(p => p.form === form);
+    const rCount = list.filter(p => p.type === "Run").length;
+    const rPct = Math.round((rCount / n) * 100);
+    const pPct = 100 - rPct;
+    const isThin = n < 10;
+    const stripedClass = isThin ? "striped" : "";
+    const isSel = FILTER_STATE.formation === form;
+
+    return `
+      <div class="table-entry clickable-entry ${isSel ? "selected" : ""}" onclick="toggleFormation('${escapeJs(form)}')">
+        <div class="entry-label" title="${escapeHtml(form)}">${escapeHtml(form)}</div>
+        <div class="entry-bar-container">
+          <div class="ratio-stack-bar">
+            ${rPct > 0 ? `<div class="ratio-run ${stripedClass}" style="width:${rPct}%">${rPct >= 14 ? rPct + "%" : ""}</div>` : ""}
+            ${pPct > 0 ? `<div class="ratio-pass ${stripedClass}" style="width:${pPct}%">${pPct >= 14 ? pPct + "%" : ""}</div>` : ""}
+          </div>
+        </div>
+        <div class="entry-count-meta">
+          <span>n=${n}</span>
+          ${isThin ? '<span class="badge-less">少ない</span>' : ""}
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  document.getElementById("rowsForm").innerHTML = html || '<div style="color:var(--text-light);font-size:12px;padding:8px 0;">データなし</div>';
+}
+
+window.toggleFormation = function(form) {
+  if (FILTER_STATE.formation === form) FILTER_STATE.formation = null;
+  else FILTER_STATE.formation = form;
+  syncPillStates();
+  refreshView();
+};
+
+function updateTopPlays(plays) {
+  const runs = plays.filter(p => p.type === "Run");
+  const passes = plays.filter(p => p.type === "Pass");
+  renderPlayFreq(document.getElementById("rowsRuns"), runs, "run");
+  renderPlayFreq(document.getElementById("rowsPasses"), passes, "pass");
+}
+
+function renderPlayFreq(box, list, type) {
+  const counts = {};
+  list.forEach(p => { if (p.off_play && p.off_play !== "UNKNOWN") counts[p.off_play] = (counts[p.off_play] || 0) + 1; });
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const maxN = sorted.length ? sorted[0][1] : 1;
+
+  box.innerHTML = sorted.map(([play, n]) => {
+    const subset = list.filter(p => p.off_play === play);
+    const avg = (subset.reduce((s, p) => s + p.gain, 0) / n).toFixed(1);
+    const pct = Math.max(5, Math.round((n / maxN) * 100));
+
+    return `
+      <div class="table-entry">
+        <div class="entry-label" title="${escapeHtml(play)}">${escapeHtml(play)}</div>
+        <div class="entry-bar-container">
+          <div class="single-freq-bar">
+            <div class="single-freq-fill ${type === "run" ? "fill-run" : "fill-pass"}" style="width:${pct}%"></div>
+          </div>
+        </div>
+        <div class="play-metrics">
+          <div class="play-times">${n}x</div>
+          <div class="play-average">平均 ${avg}</div>
+        </div>
+      </div>
+    `;
+  }).join("") || '<div style="color:var(--text-light);font-size:11px;padding:8px 0;">なし</div>';
+}
+
+function updateClips(plays) {
+  const h = document.getElementById("clipsTitle");
+  const list = document.getElementById("clipsList");
+  h.textContent = `この表示の元になった映像 (${plays.length} クリップ)`;
+
+  const limit = 25;
+  const badges = plays.slice(0, limit).map(p => {
+    return `<span class="clip-badge">${escapeHtml(p.src || p.play)}</span>`;
+  });
+  if (plays.length > limit) {
+    badges.push(`<span class="clip-badge more">ほか ${plays.length - limit}</span>`);
+  }
+  list.innerHTML = badges.join("") || '<span style="color:var(--text-light);font-size:11px;">クリップなし</span>';
+}
+
+initUIHandlers();
+</script>
+<script src="menu.js"></script>
+<script src="secure-data.js"></script>
+<script src="shared-data.js"></script>
+</body>
+</html>
