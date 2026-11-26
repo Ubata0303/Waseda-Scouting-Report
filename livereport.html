@@ -617,6 +617,7 @@
 
   <!-- 共有データ自動流し込み用の隠しファイル入力（複数試合Excel対応） -->
   <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" multiple style="display:none">
+  <input type="file" id="pdfInput" accept=".pdf,application/pdf" multiple data-no-shared-feed="true" style="display:none">
 
   <div class="page-container">
     <div class="page-header">
@@ -629,6 +630,7 @@
           <span class="live-dot"></span>
           <span id="liveStatusText">データ待機中...</span>
           <span class="file-upload-link" id="btnUploadExcel">（Excelを選択）</span>
+          <span class="file-upload-link" id="btnUploadPdf">（図面PDFを追加）</span>
         </div>
         <button class="btn-reset-link" id="btnReset">✕ 条件リセット</button>
       </div>
@@ -775,6 +777,9 @@
     <div class="modal-bottom-bar" id="modal-bottom-bar"></div>
   </div>
 
+<script src="menu.js"></script>
+<script src="secure-data.js"></script>
+<script src="shared-data.js"></script>
 <script src="scouting-extra.js"></script>
 <script>
 "use strict";
@@ -785,18 +790,46 @@ let CURRENT_MODAL_LIST = [];
 let CURRENT_MODAL_INDEX = 0;
 let SHOW_ALL_CLIPS = false;
 
+function updateStatusText() {
+  const statusEl = document.getElementById("liveStatusText");
+  if (!statusEl) return;
+  if (!RAW_DATA.length && !ALL_DIAGRAMS.length) {
+    statusEl.textContent = "データ待機中...";
+    return;
+  }
+  const diagPart = ALL_DIAGRAMS.length > 0 ? ` ／ 図面 ${ALL_DIAGRAMS.length} 枚連携` : "";
+  statusEl.textContent = `ライブ集計中（全 ${RAW_DATA.length} スナップ${diagPart}）`;
+}
+
 function loadDiagrams(customExtra) {
   if (!window.TBScoutingExtra) return;
   const extra = window.TBScoutingExtra.getExtraData(customExtra);
   ALL_DIAGRAMS = Array.isArray(extra.playDiagrams) ? extra.playDiagrams : [];
+  updateStatusText();
+}
+
+function extractCoreTeamToken(gameStr) {
+  const s = String(gameStr || "").toLowerCase().trim();
+  const vsM = s.match(/vs\.?\s*([a-z0-9\u3040-\u30ff\u4e00-\u9faf_-]+(?:\s+[a-z0-9\u3040-\u30ff\u4e00-\u9faf_-]+)?)/i);
+  if (vsM) return vsM[1].replace(/\s*#\d+.*$/, "").trim();
+  return s
+    .replace(/\b\d{6,8}\b/g, "")
+    .replace(/\b2[4-9](?:aut|spr|fall|spring)\b/gi, "")
+    .replace(/\bgame\s*\d+\b/gi, "")
+    .replace(/[()[\]#]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function findMatchingDiagram(p) {
   if (!p || !ALL_DIAGRAMS.length) return null;
-  const pNum = Number(p.play);
+  const pNum = parseInt(String(p.play ?? "").replace(/[^0-9]/g, ""), 10);
   if (!pNum) return null;
 
-  const candidates = ALL_DIAGRAMS.filter(d => Number(d.playNum) === pNum);
+  const candidates = ALL_DIAGRAMS.filter(d => {
+    const dNum = Number(d.playNum) || parseInt((String(d.title || d.gamePlay || "").match(/#\s*(\d+)/) || [])[1], 10);
+    return dNum === pNum;
+  });
   if (!candidates.length) return null;
 
   const g1 = String(p.game || "").toLowerCase().trim();
@@ -804,26 +837,43 @@ function findMatchingDiagram(p) {
 
   const date1Match = g1.match(/\b(\d{6})\b/);
   const date1 = date1Match ? date1Match[1] : "";
-  const opp1Match = g1.match(/vs\.?\s*([a-z0-9_-]+)/i);
-  const opp1 = opp1Match ? opp1Match[1].toLowerCase() : "";
+  const opp1 = extractCoreTeamToken(g1);
+
+  let bestCandidate = null;
+  let bestScore = 0;
 
   for (const d of candidates) {
     const g2 = String(d.gameName || d.gamePlay || d.title || "").toLowerCase().trim();
     if (!g2) continue;
-    if (g2 === g1 || g2.includes(g1) || g1.includes(g2)) return d;
+
+    let score = 0;
+    if (g2 === g1 || g2.includes(g1) || g1.includes(g2)) {
+      score += 100;
+    }
 
     const date2Match = g2.match(/\b(\d{6})\b/);
     const date2 = date2Match ? date2Match[1] : "";
-    const opp2Match = g2.match(/vs\.?\s*([a-z0-9_-]+)/i);
-    const opp2 = opp2Match ? opp2Match[1].toLowerCase() : "";
+    const opp2 = extractCoreTeamToken(g2);
 
-    if (date1 && date2 && date1 === date2) return d;
-    if (opp1 && opp2 && opp1 === opp2 && (!date1 || !date2 || date1 === date2)) return d;
+    if (date1 && date2 && date1 === date2) {
+      score += 80;
+    }
+    if (opp1 && opp2 && (opp1 === opp2 || opp1.includes(opp2) || opp2.includes(opp1))) {
+      score += 60;
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestCandidate = d;
+    }
   }
+
+  if (bestCandidate && bestScore > 0) return bestCandidate;
 
   // 単一試合のみ取り込まれている場合はプレー番号一致で返す
   const uniqueDiagramGames = new Set(ALL_DIAGRAMS.map(d => d.gameName).filter(Boolean));
-  if (uniqueDiagramGames.size <= 1 && candidates.length === 1) {
+  const uniqueExcelGames = new Set(RAW_DATA.map(r => r.game).filter(Boolean));
+  if ((uniqueDiagramGames.size <= 1 || uniqueExcelGames.size <= 1) && candidates.length === 1) {
     return candidates[0];
   }
   return null;
@@ -838,36 +888,23 @@ const FILTER_STATE = {
   formation: null
 };
 
-const EXCEL_MAP = {
-  "OF PLAY#": "play",
-  "ODK": "odk",
-  "QTR": "qtr",
-  "DN": "dn",
-  "DIST": "dist",
-  "YARD LN": "yard_ln",
-  "HASH": "hash",
-  "PERSONNEL": "personnel",
-  "OFF FORM": "form",
-  "MOTION": "motion",
-  "OFF PLAY": "off_play",
-  "PLAY TYPE": "type",
-  "RESULT": "result",
-  "GN/LS": "gain",
-  "DEF FRONT": "front",
-  "COVERAGE": "coverage",
-  "BLITZ": "blitz",
-  "OPP TEAM": "opp_team"
-};
-
-const HEADER_KEYWORDS = ["PLAY TYPE", "OFF FORM", "PERSONNEL", "HASH", "DN", "DIST", "OFF PLAY", "OPP TEAM"];
+const HEADER_KEYWORDS = ["PLAY TYPE", "OFF FORM", "FORMATION", "PERSONNEL", "HASH", "DN", "DOWN", "DIST", "OFF PLAY", "OPP TEAM"];
 
 function findHeaderRowIndex(rows) {
-  for (let i = 0; i < Math.min(rows.length, 20); i++) {
+  for (let i = 0; i < Math.min(rows.length, 30); i++) {
     const cells = (rows[i] || []).map(c => String(c ?? "").trim().toUpperCase());
     const matches = cells.filter(c => HEADER_KEYWORDS.some(w => c.includes(w))).length;
     if (matches >= 2) return i;
   }
   return 0;
+}
+
+function findColumnIndex(head, matchers) {
+  for (const fn of matchers) {
+    const idx = head.findIndex(fn);
+    if (idx >= 0) return idx;
+  }
+  return -1;
 }
 
 function normalizePlayType(rawType) {
@@ -879,12 +916,54 @@ function normalizePlayType(rawType) {
   return v;
 }
 
+function parseDistValue(rawDist, rawYardLn) {
+  if (rawDist === "" || rawDist == null) return null;
+  if (typeof rawDist === "number") return isNaN(rawDist) ? null : rawDist;
+  const s = String(rawDist).trim().toLowerCase();
+  if (!s) return null;
+  if (s.includes("inch")) return 1;
+  if (s.includes("goal") || s === "g") {
+    const yl = parseFloat(rawYardLn);
+    return !isNaN(yl) && yl > 0 ? yl : 5;
+  }
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
 const fileInput = document.getElementById("fileInput");
+const pdfInput = document.getElementById("pdfInput");
 const btnUploadExcel = document.getElementById("btnUploadExcel");
-if (document.body.dataset.mode === "viewer" && btnUploadExcel) {
-  btnUploadExcel.style.display = "none";
-} else if (btnUploadExcel) {
-  btnUploadExcel.onclick = () => fileInput.click();
+const btnUploadPdf = document.getElementById("btnUploadPdf");
+const IS_VIEWER = document.body.dataset.mode === "viewer";
+
+if (IS_VIEWER) {
+  if (btnUploadExcel) btnUploadExcel.style.display = "none";
+  if (btnUploadPdf) btnUploadPdf.style.display = "none";
+} else {
+  if (btnUploadExcel) btnUploadExcel.onclick = () => fileInput.click();
+  if (btnUploadPdf && pdfInput) {
+    btnUploadPdf.onclick = () => pdfInput.click();
+    pdfInput.addEventListener("change", async e => {
+      const files = Array.from(e.target.files || []).filter(f => /\.pdf$/i.test(f.name) || f.type === "application/pdf");
+      if (!files.length || !window.TBScoutingExtra) return;
+      const statusEl = document.getElementById("liveStatusText");
+      try {
+        for (let i = 0; i < files.length; i++) {
+          const f = files[i];
+          if (statusEl) statusEl.textContent = `PDF図面解析中 (${i + 1}/${files.length}): ${f.name}...`;
+          await window.TBScoutingExtra.importFromPdfFile(f, (cur, total) => {
+            if (statusEl) statusEl.textContent = `図面変換中 (${i + 1}/${files.length}: ${f.name}) ${cur}/${total} ページ...`;
+          });
+        }
+        loadDiagrams();
+        if (RAW_DATA.length) updateClips(filterPlays());
+      } catch (err) {
+        alert("PDFの読み込みに失敗しました: " + (err.message || err));
+      } finally {
+        pdfInput.value = "";
+      }
+    });
+  }
 }
 
 fileInput.addEventListener("change", e => {
@@ -899,69 +978,125 @@ async function handleExcelFiles(files) {
     for (const file of files) {
       const data = await file.arrayBuffer();
       const wb = XLSX.read(data, { type: "array" });
-      const sheet = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-      if (!rows.length) continue;
-
-      const hIdx = findHeaderRowIndex(rows);
-      const head = (rows[hIdx] || []).map(h => String(h ?? "").trim().toUpperCase());
       const cleanName = file.name.replace(/\.[^.]+$/, "");
 
-      rows.slice(hIdx + 1).forEach((r, idx) => {
-        if (!Array.isArray(r) || r.every(v => v === "" || v == null)) return;
-        const d = {};
-        for (const col in EXCEL_MAP) {
-          let v = "";
-          if (head.includes(col)) {
-            v = r[head.indexOf(col)];
-          } else if (col === "OPP TEAM") {
-            const oppIdx = head.findIndex(h => h === "OPP" || h === "OPPONENT" || h === "OPP TEAM" || h === "OPP_TEAM" || h === "GAME");
-            if (oppIdx >= 0) v = r[oppIdx];
-          } else if (col === "OF PLAY#") {
-            const pIdx = head.findIndex(h => h === "OF PLAY#" || h === "PLAY #" || h === "PLAY#" || h === "PLAY NO");
-            if (pIdx >= 0) v = r[pIdx];
-          } else if (col === "DN") {
-            const dnIdx = head.findIndex(h => h === "DN" || h === "DOWN");
-            if (dnIdx >= 0) v = r[dnIdx];
-          } else if (col === "DIST") {
-            const distIdx = head.findIndex(h => h === "DIST" || h === "DISTANCE");
-            if (distIdx >= 0) v = r[distIdx];
-          } else if (col === "GN/LS") {
-            const gnIdx = head.findIndex(h => h === "GN/LS" || h === "GAIN" || h === "YARDS" || h === "GAIN/LOSS");
-            if (gnIdx >= 0) v = r[gnIdx];
+      for (const sheetName of wb.SheetNames) {
+        const sheet = wb.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+        if (!rows.length) continue;
+
+        const hIdx = findHeaderRowIndex(rows);
+        const head = (rows[hIdx] || []).map(h => String(h ?? "").trim().toUpperCase());
+
+        const colIdx = {
+          play: findColumnIndex(head, [
+            h => h === "OF PLAY#" || h === "PLAY #" || h === "PLAY#" || h === "PLAY NO" || h === "PLAY NUMBER" || h === "#",
+            h => h.includes("PLAY#") || h.includes("PLAY #")
+          ]),
+          odk: findColumnIndex(head, [h => h === "ODK"]),
+          qtr: findColumnIndex(head, [h => h === "QTR" || h === "QUARTER"]),
+          dn: findColumnIndex(head, [h => h === "DN" || h === "DOWN"]),
+          dist: findColumnIndex(head, [h => h === "DIST" || h === "DISTANCE"]),
+          yard_ln: findColumnIndex(head, [h => h === "YARD LN" || h === "YARD LINE" || h === "YL"]),
+          hash: findColumnIndex(head, [h => h === "HASH"]),
+          personnel: findColumnIndex(head, [
+            h => h === "PERSONNEL",
+            h => h.includes("PERSONNE") || h.includes("PERSONEL")
+          ]),
+          form: findColumnIndex(head, [
+            h => h === "OFF FORM" || h === "FORMATION" || h === "フォーメーション",
+            h => h.includes("OFF FORM") || h.includes("FORMATION")
+          ]),
+          motion: findColumnIndex(head, [h => h === "MOTION"]),
+          off_play: findColumnIndex(head, [
+            h => h === "OFF PLAY" || h === "OFFPLAY" || h === "FAVORITE PLAYS" || h === "PLAY",
+            h => h.includes("OFF PLAY")
+          ]),
+          type: findColumnIndex(head, [
+            h => h === "PLAY TYPE(D)" || h === "PLAY TYPE (D)" || h === "PLAY TYPE(" || h === "PLAY TYPE(D",
+            h => h === "PLAY TYPE",
+            h => h.includes("PLAY TYPE")
+          ]),
+          result: findColumnIndex(head, [h => h === "RESULT"]),
+          gain: findColumnIndex(head, [
+            h => h === "GN/LS" || h === "GAIN" || h === "GAIN/LOSS" || h === "YARDS",
+            h => h.includes("GN/LS") || h.includes("GAIN")
+          ]),
+          opp_team: findColumnIndex(head, [
+            h => h === "OPP TEAM" || h === "OPP" || h === "OPPONENT" || h === "OPP_TEAM" || h === "GAME"
+          ]),
+          season: findColumnIndex(head, [h => h === "SEASON"])
+        };
+
+        // ヘッダー行に必須列が見つからないシートはスキップ
+        if (colIdx.type === -1 && colIdx.form === -1) continue;
+
+        let lastOpp = "";
+        let lastSeason = "";
+
+        rows.slice(hIdx + 1).forEach((r, idx) => {
+          if (!Array.isArray(r) || r.every(v => v === "" || v == null)) return;
+
+          const getVal = cIdx => {
+            if (cIdx < 0) return "";
+            const val = r[cIdx];
+            if (val == null) return "";
+            return typeof val === "string" ? val.trim() : val;
+          };
+
+          const rawType = getVal(colIdx.type);
+          const type = normalizePlayType(rawType);
+          const form = String(getVal(colIdx.form) || "").trim();
+          const off_play = String(getVal(colIdx.off_play) || "").trim();
+
+          // 空行や集計行（RunでもPassでもない行）は除外
+          if (!type && !form && !off_play) return;
+          if (type !== "Run" && type !== "Pass") return;
+
+          let oppRaw = String(getVal(colIdx.opp_team) || "").trim();
+          let seasonRaw = String(getVal(colIdx.season) || "").trim();
+          if (oppRaw) lastOpp = oppRaw;
+          else if (lastOpp) oppRaw = lastOpp;
+          if (seasonRaw) lastSeason = seasonRaw;
+          else if (lastSeason) seasonRaw = lastSeason;
+
+          let opp = oppRaw;
+          if (opp && seasonRaw && !opp.toLowerCase().includes(seasonRaw.toLowerCase()) && !/^\d{6}/.test(opp)) {
+            opp = /vs/i.test(opp) ? `${seasonRaw} ${opp}` : `${seasonRaw} vs ${opp}`;
           }
-          if (typeof v === "string") v = v.trim();
-          if (v == null) v = "";
-
-          if (col === "PLAY TYPE") {
-            v = normalizePlayType(v);
+          if (!opp) {
+            opp = (wb.SheetNames.length > 1 ? sheetName : cleanName) || "Game";
           }
-          d[EXCEL_MAP[col]] = v;
-        }
 
-        // 空行や集計行（RunでもPassでもなく体型もプレー名もない行）は除外
-        if (!d.type && !d.form && !d.off_play) return;
-        if (d.type !== "Run" && d.type !== "Pass") return;
+          const yardLnVal = getVal(colIdx.yard_ln);
+          const dnVal = parseInt(getVal(colIdx.dn), 10);
+          const distVal = parseDistValue(getVal(colIdx.dist), yardLnVal);
+          const gainNum = parseFloat(getVal(colIdx.gain));
+          const playNo = getVal(colIdx.play) || (idx + 1);
 
-        const opp = d.opp_team || cleanName || "Game";
-        d.game = opp;
-        d.opp_team = opp;
-        d.dn = Number(d.dn) || null;
-        d.dist = Number(d.dist) || null;
-        d.gain = Number(d.gain) || 0;
-        d.play = d.play || (idx + 1);
-        d.src = opp + " #" + d.play;
-
-        allPlays.push(d);
-      });
+          allPlays.push({
+            game: opp,
+            opp_team: opp,
+            play: playNo,
+            src: `${opp} #${playNo}`,
+            odk: String(getVal(colIdx.odk) || "O").toUpperCase(),
+            dn: !isNaN(dnVal) ? dnVal : null,
+            dist: distVal,
+            yard_ln: yardLnVal !== "" && !isNaN(Number(yardLnVal)) ? Number(yardLnVal) : null,
+            hash: String(getVal(colIdx.hash) || "M").toUpperCase(),
+            personnel: String(getVal(colIdx.personnel) || "").trim(),
+            form: form || "UNKNOWN",
+            off_play: off_play || "UNKNOWN",
+            type: type,
+            gain: !isNaN(gainNum) ? gainNum : 0
+          });
+        });
+      }
     }
 
-    if (!ALL_DIAGRAMS.length) loadDiagrams();
+    loadDiagrams();
     setupDataset({ plays: allPlays });
-    const statusEl = document.getElementById("liveStatusText");
-    if (statusEl) {
-      statusEl.textContent = `ライブ集計中（全 ${allPlays.length} スナップ）`;
-    }
+    updateStatusText();
   } catch (err) {
     console.error("Excel parse error:", err);
   }
@@ -1222,13 +1357,13 @@ function updateInsight(plays) {
 function updateDDTable(plays) {
   const configs = [
     { label: "1st & 10", fn: p => p.dn === 1 && p.dist === 10 },
-    { label: "1st other", fn: p => p.dn === 1 && p.dist !== 10 },
-    { label: "2nd & short", fn: p => p.dn === 2 && p.dist <= 3 },
-    { label: "2nd & medium", fn: p => p.dn === 2 && p.dist >= 4 && p.dist <= 6 },
-    { label: "2nd & long", fn: p => p.dn === 2 && p.dist >= 7 },
-    { label: "3rd/4th & short", fn: p => (p.dn === 3 || p.dn === 4) && p.dist <= 3 },
-    { label: "3rd/4th & medium", fn: p => (p.dn === 3 || p.dn === 4) && p.dist >= 4 && p.dist <= 6 },
-    { label: "3rd/4th & long", fn: p => (p.dn === 3 || p.dn === 4) && p.dist >= 7 }
+    { label: "1st other", fn: p => p.dn === 1 && p.dist !== null && p.dist !== 10 },
+    { label: "2nd & short", fn: p => p.dn === 2 && p.dist !== null && p.dist <= 3 },
+    { label: "2nd & medium", fn: p => p.dn === 2 && p.dist !== null && p.dist >= 4 && p.dist <= 6 },
+    { label: "2nd & long", fn: p => p.dn === 2 && p.dist !== null && p.dist >= 7 },
+    { label: "3rd/4th & short", fn: p => (p.dn === 3 || p.dn === 4) && p.dist !== null && p.dist <= 3 },
+    { label: "3rd/4th & medium", fn: p => (p.dn === 3 || p.dn === 4) && p.dist !== null && p.dist >= 4 && p.dist <= 6 },
+    { label: "3rd/4th & long", fn: p => (p.dn === 3 || p.dn === 4) && p.dist !== null && p.dist >= 7 }
   ];
 
   const html = configs.map(c => {
@@ -1491,8 +1626,5 @@ window.addEventListener("tb-extra-published", e => {
 loadDiagrams();
 initUIHandlers();
 </script>
-<script src="menu.js"></script>
-<script src="secure-data.js"></script>
-<script src="shared-data.js"></script>
 </body>
 </html>

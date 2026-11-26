@@ -137,6 +137,16 @@
             // スラッシュ分割前に末尾の "1/2" 等の枠内分数ノイズを除去
             raw = raw.replace(/\s+[1-4]\s*\/\s*[1-4]\s*$/g, '').trim();
             const rawParts = raw.split('/').map(s => s.trim());
+            if (rawParts[0]) {
+                if (!d.playNum) {
+                    const pm = rawParts[0].match(/#\s*(\d+)/);
+                    if (pm) d.playNum = parseInt(pm[1], 10);
+                }
+                if (!d.gameName) {
+                    const gm = rawParts[0].match(/^(.*?)(?:\s*#\d+.*)?$/);
+                    if (gm) d.gameName = gm[1].trim();
+                }
+            }
             const parts = rawParts.slice(1);
             if (parts.length >= 5) {
                 d.downDist = d.downDist || parts[0];
