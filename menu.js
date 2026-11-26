@@ -55,18 +55,71 @@
     bar.querySelector('.tbm-page').textContent = current.label;
 
     const badge = bar.querySelector('#tbm-team-badge');
+
+    function readExtraFallback() {
+        if (typeof window !== 'undefined' && window.TBScoutingExtra && window.TBScoutingExtra.getExtraData) {
+            try { return window.TBScoutingExtra.getExtraData(); } catch (_) {}
+        }
+        const WN_PREFIX = 'tb-extra-data:';
+        try {
+            if (typeof window !== 'undefined' && window.name && window.name.indexOf(WN_PREFIX) === 0) {
+                return JSON.parse(window.name.slice(WN_PREFIX.length));
+            }
+        } catch (_) {}
+        try {
+            const raw = localStorage.getItem('tb-extra-data');
+            if (raw) return JSON.parse(raw);
+        } catch (_) {}
+        try {
+            const feed = localStorage.getItem('tb-shared-feed');
+            if (feed) {
+                const parsed = JSON.parse(feed);
+                if (parsed && parsed.extra) return parsed.extra;
+            }
+        } catch (_) {}
+        return null;
+    }
+
+    function getTeamInfo(customExtra) {
+        const extra = customExtra || readExtraFallback();
+        let name = '';
+        let color = '#ad181f';
+        if (extra) {
+            name = String(extra.teamName || '').trim();
+            const ml = extra.memberList || {};
+            if (ml.numColor) color = ml.numColor;
+            if (!name) {
+                const target = String(extra.pdfFileName || '') + ' ' + String(extra.opponent || '');
+                if (/早稲田|waseda|big\s*bears/i.test(target)) name = '早稲田';
+                else if (/法政|hosei|orange/i.test(target)) name = '法政';
+                else if (/明治|meiji|griffins/i.test(target)) name = '明治';
+                else if (/立教|rikkyo|rikkyou|rushers/i.test(target)) name = '立教';
+                else if (/中央|chuo|chuuou|raccons|raccoons/i.test(target)) name = '中央';
+                else if (/日本体育|日体|nittai/i.test(target)) name = '日体大';
+                else if (/日本大学|日大|nihon|phoenix/i.test(target)) name = '日大';
+                else if (/慶應|慶応|keio|unicorns/i.test(target)) name = '慶應';
+                else if (/関西学院|関学|kwansei|kg|fighters/i.test(target)) name = '関学';
+                else if (/立命館|立命|rits|panthers/i.test(target)) name = '立命館';
+                else if (/関西大学|関大|kaisers/i.test(target)) name = '関大';
+                else if (/京都大学|京大|gangsters/i.test(target)) name = '京大';
+                else if (/神戸大学|神戸|ravens/i.test(target)) name = '神戸';
+            }
+            if (!name && Array.isArray(ml.offRows)) {
+                const isWaseda = ml.offRows.some(row => Array.isArray(row) && row.some(c => /宇野|風間|道浦|岩井|木庭|長内|安東/.test(String(c?.name || ''))));
+                if (isWaseda) name = '早稲田';
+            }
+        }
+        return { name, color };
+    }
+
     function updateTeamBadge(customExtra) {
         if (!badge) return;
-        const extra = customExtra || ((window.TBScoutingExtra && window.TBScoutingExtra.getExtraData) ? window.TBScoutingExtra.getExtraData() : null);
-        if (!extra) return;
-        const name = String(extra.teamName || '').trim();
-        const ml = extra.memberList || {};
-        const color = ml.numColor || '#ad181f';
-        if (name) {
-            badge.textContent = name;
+        const info = getTeamInfo(customExtra);
+        if (info.name) {
+            badge.textContent = info.name;
             badge.style.display = 'inline-flex';
-            badge.style.backgroundColor = color;
-            const hex = color.replace(/^#/, '');
+            badge.style.backgroundColor = info.color;
+            const hex = String(info.color).replace(/^#/, '');
             if (hex.length === 6) {
                 const r = parseInt(hex.slice(0, 2), 16);
                 const g = parseInt(hex.slice(2, 4), 16);
