@@ -326,12 +326,9 @@
 
         // 過去の誤判定（安東選手などを法政と誤認したオレンジ強制上書き）を自己修復
         if (rawMemberList && (rawMemberList.numColor === '#e97132' || rawMemberList.numColor === '#e57229')) {
-            const hasRedTeamPlayer = (Array.isArray(rawMemberList.offRows) && rawMemberList.offRows.some(row =>
-                Array.isArray(row) && row.some(c =>
-                    /宇野|風間|⾵間|佐藤|道浦|岩井|木庭|⽊庭|長内|⻑内|神鳥|小郷|安田/.test(String(c?.name || ''))
-                )
-            )) || /早稲田|waseda|big\s*bears/i.test(saved.opponent || '') || /早稲田|waseda/i.test(saved.pdfFileName || '');
-            if (hasRedTeamPlayer) {
+            // 選手名では判定しない（他校の誤判定を防ぐため、PDFファイル名だけで判断）
+            const isWasedaPdf = /早稲田|waseda/i.test(saved.pdfFileName || '');
+            if (isWasedaPdf) {
                 rawMemberList.numColor = '#ad181f';
             }
         }
@@ -347,15 +344,9 @@
             rawCadence.items = rawCadencePages[0].items;
         }
 
-        // ロスター選手名やファイル名から早稲田を最優先で特定
-        const isWaseda = (Array.isArray(rawMemberList?.offRows) && rawMemberList.offRows.some(row =>
-            Array.isArray(row) && row.some(c => /宇野|風間|道浦|岩井|木庭|長内|安東/.test(String(c?.name || '')))
-        )) || /早稲田|waseda/i.test(saved.opponent || '') || /早稲田|waseda/i.test(saved.pdfFileName || '');
-
-        let teamName = saved.teamName;
-        if (isWaseda) {
-            teamName = '早稲田';
-        } else if (!teamName || teamName === 'Fighters') {
+        // チーム名：保存済みの値（PDF取り込み時にファイル名から決定 or 手動設定）を最優先
+        let teamName = String(saved.teamName || '').trim();
+        if (!teamName || teamName === 'Fighters') {
             const cleanOpponent = (saved.opponent === '20261015 / Fighters') ? '' : (saved.opponent || '');
             teamName = extractTeamName(saved.pdfFileName, cleanOpponent);
         }
@@ -1429,7 +1420,15 @@
 
         if (result.memberList || result.cadence || (result.playDiagrams && result.playDiagrams.length)) {
             result.pdfFileName = file.name;
-            result.teamName = extractTeamName(file.name, result.opponent);
+            // スカレポ本体（Member List入り）のPDFなら、そのファイル名からチーム名を更新
+            // 図面だけのPDFの場合は、既存のチーム名が空のときだけ補完する
+            const detectedTeam = extractTeamName(file.name, result.opponent);
+            if (result.memberList) {
+                // 新しいスカレポを入れたら前のチーム名は必ず捨てる（判定できなければ空＝バッジ非表示）
+                result.teamName = detectedTeam || '';
+            } else if (!getExtraData().teamName && detectedTeam) {
+                result.teamName = detectedTeam;
+            }
             return saveExtraData(result);
         }
         throw new Error('PDF内に Member List, Cadence, または Play Diagram のページが見つかりませんでした。');

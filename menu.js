@@ -88,17 +88,11 @@
             const ml = extra.memberList || {};
             if (ml.numColor) color = ml.numColor;
 
-            // 1. ロスター内の早稲田選手チェック（最優先）
-            const isWaseda = (Array.isArray(ml.offRows) && ml.offRows.some(row =>
-                Array.isArray(row) && row.some(c => /宇野|風間|道浦|岩井|木庭|長内|安東/.test(String(c?.name || '')))
-            )) || /早稲田|waseda|big\s*bears/i.test(String(extra.pdfFileName || '')) || /早稲田|waseda/i.test(String(extra.opponent || ''));
-
-            if (isWaseda) {
-                name = '早稲田';
-            } else {
-                name = String(extra.teamName || '').trim();
-                // 旧デフォルトの Fighters は無効化して再判定
-                if (name === 'Fighters' || !name) {
+            // 保存済みのチーム名（PDF取り込み時にファイル名から決定 or 手動設定）をそのまま使う
+            name = String(extra.teamName || '').trim();
+            if (name === 'Fighters' || !name) {
+                name = '';
+                {
                     const cleanOpp = (extra.opponent === '20261015 / Fighters') ? '' : String(extra.opponent || '');
                     const target = String(extra.pdfFileName || '') + ' ' + cleanOpp;
                     if (/早稲田|waseda|big\s*bears/i.test(target)) name = '早稲田';
