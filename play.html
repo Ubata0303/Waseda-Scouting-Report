@@ -429,6 +429,37 @@ body {
     align-items: center;
     flex-wrap: wrap;
 }
+.modal-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.modal-zoom-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #fff;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s;
+    user-select: none;
+}
+.modal-zoom-btn:hover {
+    background: rgba(255, 255, 255, 0.28);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+.modal-overlay.is-zoomed .modal-zoom-btn {
+    background: #2563eb;
+    border-color: #60a5fa;
+    color: #fff;
+    box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
+}
 .modal-close-btn {
     background: rgba(255, 255, 255, 0.15);
     border: none;
@@ -462,6 +493,16 @@ body {
     border-radius: 6px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     user-select: none;
+    cursor: zoom-in;
+    transition: width 0.2s ease, height 0.2s ease, max-width 0.2s ease, max-height 0.2s ease;
+}
+.modal-overlay.is-zoomed .modal-img {
+    width: 96vw;
+    max-width: 1500px;
+    height: 86vh;
+    max-height: 86vh;
+    cursor: zoom-out;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.6);
 }
 .modal-nav-btn {
     position: absolute;
@@ -577,7 +618,10 @@ body {
     <div class="modal-overlay" id="modal-overlay">
         <div class="modal-top-bar">
             <div class="modal-play-info" id="modal-play-info">#1 1-10 DRAW PAP</div>
-            <button type="button" class="modal-close-btn" id="modal-close-btn" aria-label="閉じる">×</button>
+            <div class="modal-actions">
+                <button type="button" class="modal-zoom-btn" id="modal-zoom-btn" title="画面いっぱいに拡大 (Zキー / 画像クリック)" aria-label="拡大">⤢ 拡大</button>
+                <button type="button" class="modal-close-btn" id="modal-close-btn" aria-label="閉じる">×</button>
+            </div>
         </div>
         <div class="modal-img-container">
             <button type="button" class="modal-nav-btn prev" id="modal-prev-btn" aria-label="前へ">‹</button>
@@ -614,8 +658,20 @@ body {
     const modalPlayInfo = document.getElementById('modal-play-info');
     const modalBottomBar = document.getElementById('modal-bottom-bar');
     const modalCloseBtn = document.getElementById('modal-close-btn');
+    const modalZoomBtn = document.getElementById('modal-zoom-btn');
     const modalPrevBtn = document.getElementById('modal-prev-btn');
     const modalNextBtn = document.getElementById('modal-next-btn');
+
+    let isModalZoomed = false;
+    function toggleModalZoom(force) {
+        isModalZoomed = typeof force === 'boolean' ? force : !isModalZoomed;
+        modalOverlay.classList.toggle('is-zoomed', isModalZoomed);
+        if (modalZoomBtn) {
+            modalZoomBtn.innerHTML = isModalZoomed ? '⤡ 標準サイズ' : '⤢ 拡大';
+            modalZoomBtn.setAttribute('aria-label', isModalZoomed ? '標準サイズに戻す' : '拡大');
+            modalZoomBtn.title = isModalZoomed ? '標準サイズに戻す (Zキー / 画像クリック)' : '画面いっぱいに拡大 (Zキー / 画像クリック)';
+        }
+    }
 
     let allDiagrams = [];
     let filteredDiagrams = [];
@@ -1257,6 +1313,7 @@ body {
         document.body.style.overflow = '';
         modalImg.src = EMPTY_GIF;
         revokeModalUrl();
+        toggleModalZoom(false);
     }
 
     function updateModalContent() {
@@ -1315,6 +1372,8 @@ body {
     });
 
     modalCloseBtn.addEventListener('click', closeModal);
+    if (modalZoomBtn) modalZoomBtn.addEventListener('click', () => toggleModalZoom());
+    modalImg.addEventListener('click', () => toggleModalZoom());
     modalPrevBtn.addEventListener('click', prevModal);
     modalNextBtn.addEventListener('click', nextModal);
     modalOverlay.addEventListener('click', e => {
@@ -1328,6 +1387,7 @@ body {
         if (e.key === 'Escape') closeModal();
         if (e.key === 'ArrowLeft') prevModal();
         if (e.key === 'ArrowRight') nextModal();
+        if (e.key === 'z' || e.key === 'Z' || e.key === '+') toggleModalZoom();
     });
 
     let touchStartX = 0;

@@ -25,6 +25,8 @@
     .tbm-btn:active { background: #f1f5f9; }
     .tbm-btn span { display: block; width: 22px; height: 2.5px; background: #1e293b; border-radius: 2px; }
     .tbm-title { font-weight: 700; color: #3b82f6; font-size: 1rem; }
+    .tbm-badge { display: none; align-items: center; justify-content: center; padding: 2px 7px; border-radius: 4px; color: #fff;
+        font-size: 0.72rem; font-weight: 700; line-height: 1.25; letter-spacing: 0.02em; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.12); flex-shrink: 0; }
     .tbm-page { margin-left: auto; font-size: 0.85rem; color: #64748b; font-weight: 600; }
     .tbm-spacer { height: 52px; flex-basis: 100%; width: 100%; flex-shrink: 0; }
     .tbm-overlay { position: fixed; inset: 0; z-index: 3100; background: rgba(15, 23, 42, 0.45); opacity: 0; pointer-events: none; transition: opacity .2s; }
@@ -47,8 +49,47 @@
     const bar = document.createElement('div');
     bar.className = 'tbm-bar';
     bar.innerHTML = '<button class="tbm-btn" type="button" aria-label="メニューを開く"><span></span><span></span><span></span></button>' +
-        '<span class="tbm-title">Scouting Report</span><span class="tbm-page"></span>';
+        '<span class="tbm-title">Scouting Report</span>' +
+        '<span class="tbm-badge" id="tbm-team-badge"></span>' +
+        '<span class="tbm-page"></span>';
     bar.querySelector('.tbm-page').textContent = current.label;
+
+    const badge = bar.querySelector('#tbm-team-badge');
+    function updateTeamBadge(customExtra) {
+        if (!badge) return;
+        const extra = customExtra || ((window.TBScoutingExtra && window.TBScoutingExtra.getExtraData) ? window.TBScoutingExtra.getExtraData() : null);
+        if (!extra) return;
+        const name = String(extra.teamName || '').trim();
+        const ml = extra.memberList || {};
+        const color = ml.numColor || '#ad181f';
+        if (name) {
+            badge.textContent = name;
+            badge.style.display = 'inline-flex';
+            badge.style.backgroundColor = color;
+            const hex = color.replace(/^#/, '');
+            if (hex.length === 6) {
+                const r = parseInt(hex.slice(0, 2), 16);
+                const g = parseInt(hex.slice(2, 4), 16);
+                const b = parseInt(hex.slice(4, 6), 16);
+                const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+                badge.style.color = (yiq >= 170) ? '#0f172a' : '#ffffff';
+            } else {
+                badge.style.color = '#ffffff';
+            }
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+    updateTeamBadge();
+
+    window.addEventListener('tb-extra-published', e => {
+        updateTeamBadge(e.detail);
+    });
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => updateTeamBadge());
+    }
+    setTimeout(() => updateTeamBadge(), 300);
+    setTimeout(() => updateTeamBadge(), 1000);
 
     const overlay = document.createElement('div');
     overlay.className = 'tbm-overlay';

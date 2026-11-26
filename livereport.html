@@ -536,6 +536,37 @@
       align-items: center;
       flex-wrap: wrap;
     }
+    .modal-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .modal-zoom-btn {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: #fff;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .modal-zoom-btn:hover {
+      background: rgba(255, 255, 255, 0.28);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+    .modal-overlay.is-zoomed .modal-zoom-btn {
+      background: #2563eb;
+      border-color: #60a5fa;
+      color: #fff;
+      box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
+    }
     .modal-close-btn {
       background: rgba(255, 255, 255, 0.15);
       border: none;
@@ -570,6 +601,16 @@
       border-radius: 8px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.4);
       user-select: none;
+      cursor: zoom-in;
+      transition: width 0.2s ease, height 0.2s ease, max-width 0.2s ease, max-height 0.2s ease;
+    }
+    .modal-overlay.is-zoomed .modal-img {
+      width: 96vw;
+      max-width: 1500px;
+      height: 86vh;
+      max-height: 86vh;
+      cursor: zoom-out;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.6);
     }
     .modal-nav-btn {
       position: absolute;
@@ -767,7 +808,10 @@
   <div class="modal-overlay" id="modal-overlay">
     <div class="modal-top-bar">
       <div class="modal-play-info" id="modal-play-info"></div>
-      <button type="button" class="modal-close-btn" id="modal-close-btn" aria-label="閉じる">×</button>
+      <div class="modal-actions">
+        <button type="button" class="modal-zoom-btn" id="modal-zoom-btn" title="画面いっぱいに拡大 (Zキー / 画像クリック)" aria-label="拡大">⤢ 拡大</button>
+        <button type="button" class="modal-close-btn" id="modal-close-btn" aria-label="閉じる">×</button>
+      </div>
     </div>
     <div class="modal-img-container">
       <button type="button" class="modal-nav-btn prev" id="modal-prev-btn" aria-label="前へ">‹</button>
@@ -1533,8 +1577,20 @@ const modalImg = document.getElementById("modal-img");
 const modalPlayInfo = document.getElementById("modal-play-info");
 const modalBottomBar = document.getElementById("modal-bottom-bar");
 const modalCloseBtn = document.getElementById("modal-close-btn");
+const modalZoomBtn = document.getElementById("modal-zoom-btn");
 const modalPrevBtn = document.getElementById("modal-prev-btn");
 const modalNextBtn = document.getElementById("modal-next-btn");
+
+let isModalZoomed = false;
+function toggleClipModalZoom(force) {
+  isModalZoomed = typeof force === "boolean" ? force : !isModalZoomed;
+  modalOverlay.classList.toggle("is-zoomed", isModalZoomed);
+  if (modalZoomBtn) {
+    modalZoomBtn.innerHTML = isModalZoomed ? "⤡ 標準サイズ" : "⤢ 拡大";
+    modalZoomBtn.setAttribute("aria-label", isModalZoomed ? "標準サイズに戻す" : "拡大");
+    modalZoomBtn.title = isModalZoomed ? "標準サイズに戻す (Zキー / 画像クリック)" : "画面いっぱいに拡大 (Zキー / 画像クリック)";
+  }
+}
 
 function openClipModal(index) {
   if (!CURRENT_MODAL_LIST[index]) return;
@@ -1548,6 +1604,7 @@ function closeClipModal() {
   modalOverlay.classList.remove("active");
   document.body.style.overflow = "";
   modalImg.src = "";
+  toggleClipModalZoom(false);
 }
 
 function updateClipModalContent() {
@@ -1591,6 +1648,8 @@ function nextClipModal() {
 }
 
 modalCloseBtn.addEventListener("click", closeClipModal);
+if (modalZoomBtn) modalZoomBtn.addEventListener("click", () => toggleClipModalZoom());
+modalImg.addEventListener("click", () => toggleClipModalZoom());
 modalPrevBtn.addEventListener("click", prevClipModal);
 modalNextBtn.addEventListener("click", nextClipModal);
 modalOverlay.addEventListener("click", e => {
@@ -1604,6 +1663,7 @@ document.addEventListener("keydown", e => {
   if (e.key === "Escape") closeClipModal();
   if (e.key === "ArrowLeft") prevClipModal();
   if (e.key === "ArrowRight") nextClipModal();
+  if (e.key === "z" || e.key === "Z" || e.key === "+") toggleClipModalZoom();
 });
 
 let touchStartX = 0;

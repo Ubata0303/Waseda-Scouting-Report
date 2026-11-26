@@ -23,7 +23,7 @@
     --text-secondary: #475569;
     --accent: #ad181f;
     --num-blue: #0432ff;
-    --num-red: #ff0000;
+    --num-red: #ad181f;
     --line-gray: #d9d9d9;
 }
 
@@ -181,6 +181,16 @@ body {
     color: var(--num-red);
     font-weight: 700;
 }
+.txt-orange {
+    color: #e57229;
+    font-weight: 700;
+}
+:root.theme-red .txt-orange {
+    color: var(--num-red) !important;
+}
+:root.theme-blue .txt-orange {
+    color: var(--num-blue) !important;
+}
 
 /* フィールド写真 */
 .cadence-photo-area {
@@ -306,6 +316,22 @@ body {
     const photoModalImg = document.getElementById('photo-modal-img');
 
     function render() {
+        const ml = extraData.memberList || {};
+        const themeColor = ml.numColor || '#ad181f';
+        document.documentElement.style.setProperty('--accent', themeColor);
+        document.documentElement.style.setProperty('--num-red', themeColor);
+
+        // テーマ系統クラスの付与
+        const hex = String(themeColor).replace(/^#/, '');
+        let tone = 'red';
+        if (hex.length === 6) {
+            const r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16);
+            if (b > 130 && b > r * 1.15 && b > g) tone = 'blue';
+            else if (r > 160 && g >= 65 && g <= 185 && b < 100 && (r - g) > 20) tone = 'orange';
+        }
+        document.documentElement.classList.remove('theme-red', 'theme-blue', 'theme-orange');
+        document.documentElement.classList.add(`theme-${tone}`);
+
         const cad = extraData.cadence || { headline: '', items: [], image: '' };
         let pages = extraData.cadencePages;
         if (!Array.isArray(pages) || pages.length === 0) {

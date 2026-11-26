@@ -412,16 +412,7 @@ body {
 
     function render() {
         const ml = extraData.memberList || {};
-        let numColor = ml.numColor || '#0432ff';
-        const isOrangeRoster = /orange|hosei|法政/i.test(extraData.opponent || '') ||
-            (Array.isArray(ml.offRows) && ml.offRows.some(r => Array.isArray(r) && r.some(c =>
-                /大場|⼤場|菊池|黒川|黑川|⿊川|安藤|金田|江渕/.test(String(c?.name || '')) ||
-                (String(c?.num || '').trim() === '77' && String(c?.pos || '').trim() === 'LT')
-            )));
-        if (isOrangeRoster && (!ml.numColor || ml.numColor === '#0432ff')) {
-            numColor = '#e97132';
-            ml.numColor = '#e97132';
-        }
+        const numColor = ml.numColor || '#0432ff';
         document.documentElement.style.setProperty('--member-num-color', numColor);
         offContainer.innerHTML = '';
         (ml.offRows || []).forEach(row => {

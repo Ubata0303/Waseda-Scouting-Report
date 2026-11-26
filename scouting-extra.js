@@ -2,6 +2,7 @@
 (function () {
     const DEFAULT_EXTRA = {
         opponent: "20261015 / Fighters",
+        teamName: "Fighters",
         memberList: {
             numColor: "#0432ff",
             offTitle: "OFF Member List",
@@ -197,8 +198,77 @@
         return d;
     }
 
-    // 過去に取り込んだCadenceデータから自動生成された不要な「■概要」を除去し、本来の見出しに統合する
-    function ensureCadencePageClean(cp, isOrangeTeam) {
+    // PDFファイル名や表紙テキストから大学・チーム名を抽出
+    function extractTeamName(fileName, coverText) {
+        const TEAMS = [
+            { match: /早稲田|waseda|big\s*bears/i, name: '早稲田' },
+            { match: /法政|hosei|orange/i, name: '法政' },
+            { match: /明治|meiji|griffins/i, name: '明治' },
+            { match: /立教|rikkyo|rikkyou|rushers/i, name: '立教' },
+            { match: /中央|chuo|chuuou|raccons|raccoons/i, name: '中央' },
+            { match: /日本体育|日体|nittai|lions/i, name: '日体大' },
+            { match: /日本大学|日大|nihon|phoenix/i, name: '日大' },
+            { match: /慶應|慶応|keio|unicorns/i, name: '慶應' },
+            { match: /東京大学|東大|tokyo|warriors/i, name: '東大' },
+            { match: /関西学院|関学|kwansei|kg|fighters/i, name: '関学' },
+            { match: /立命館|立命|rits|ritsumei|panthers/i, name: '立命館' },
+            { match: /関西大学|関大|kaisers/i, name: '関大' },
+            { match: /京都大学|京大|gangsters/i, name: '京大' },
+            { match: /神戸大学|神戸|ravens/i, name: '神戸' },
+            { match: /近畿大学|近大|devils/i, name: '近大' },
+            { match: /甲南|red\s*gang/i, name: '甲南' },
+            { match: /同志社|wild\s*rover/i, name: '同志社' },
+            { match: /桜美林|three\s*nails\s*crowns/i, name: '桜美林' },
+            { match: /専修|green\s*monsters/i, name: '専修' },
+            { match: /東洋|vikings/i, name: '東洋' },
+            { match: /駒澤|blue\s*tide/i, name: '駒澤' },
+            { match: /国士舘|rhinocerous/i, name: '国士舘' },
+            { match: /横浜国立|横国|mastiffs/i, name: '横国' },
+            { match: /上智|golden\s*eagles/i, name: '上智' }
+        ];
+        if (fileName && typeof fileName === 'string') {
+            for (const t of TEAMS) {
+                if (t.match.test(fileName)) return t.name;
+            }
+            // パターンにない場合、アンダースコア・ハイフン・スペースの前の文字列
+            const base = fileName.replace(/\.pdf$/i, '').trim();
+            const seg = base.split(/[_\-\s]/)[0];
+            if (seg && seg.length <= 12 && !/^\d+$/.test(seg) && !/スカレポ|スカウティング|scout/i.test(seg)) {
+                return seg;
+            }
+        }
+        if (coverText && typeof coverText === 'string') {
+            for (const t of TEAMS) {
+                if (t.match.test(coverText)) return t.name;
+            }
+            const clean = coverText.replace(/^\d{6,8}\s*[\/|\-]\s*/, '').trim();
+            if (clean && clean.length <= 12 && !/^\d+$/.test(clean)) return clean;
+        }
+        return '';
+    }
+
+    // 背番号色（numColor）から系統色（'red' | 'blue' | 'orange'）を判定
+    function detectColorTone(colorStr) {
+        if (!colorStr || typeof colorStr !== 'string') return 'red';
+        const c = colorStr.trim().toLowerCase();
+        if (c.startsWith('#')) {
+            const hex = c.slice(1);
+            if (hex.length === 6) {
+                const r = parseInt(hex.slice(0, 2), 16);
+                const g = parseInt(hex.slice(2, 4), 16);
+                const b = parseInt(hex.slice(4, 6), 16);
+                if (b > 130 && b > r * 1.15 && b > g) return 'blue';
+                if (r > 160 && g >= 65 && g <= 185 && b < 100 && (r - g) > 20) return 'orange';
+                if (r > 120 && (r - g) > 35 && (r - b) > 35) return 'red';
+            }
+        }
+        if (/blue/i.test(c)) return 'blue';
+        if (/orange/i.test(c)) return 'orange';
+        return 'red';
+    }
+
+    // 過去に取り込んだCadenceデータから自動生成された不要な「■概要」を除去し、チームカラーに同期する
+    function ensureCadencePageClean(cp, tone) {
         if (!cp || typeof cp !== 'object') return cp;
         if (Array.isArray(cp.items)) {
             while (cp.items.length > 0 && cp.items[0] && cp.items[0].heading === '■概要') {
@@ -222,16 +292,28 @@
                 if (it && it.heading === '■概要') {
                     it.heading = '';
                 }
-                if (isOrangeTeam && it && typeof it.body === 'string') {
-                    it.body = it.body.replace(/\{red:/g, '{orange:');
+                if (it && typeof it.body === 'string') {
+                    if (tone === 'orange') {
+                        it.body = it.body.replace(/\{red:/g, '{orange:');
+                    } else if (tone === 'red') {
+                        it.body = it.body.replace(/\{orange:/g, '{red:');
+                    } else if (tone === 'blue') {
+                        it.body = it.body.replace(/\{orange:|\{red:/g, '{blue:');
+                    }
                 }
             });
         }
-        if (isOrangeTeam && typeof cp.headline === 'string') {
-            cp.headline = cp.headline.replace(/\{red:/g, '{orange:');
+        if (typeof cp.headline === 'string') {
+            if (tone === 'orange') {
+                cp.headline = cp.headline.replace(/\{red:/g, '{orange:');
+            } else if (tone === 'red') {
+                cp.headline = cp.headline.replace(/\{orange:/g, '{red:');
+            } else if (tone === 'blue') {
+                cp.headline = cp.headline.replace(/\{orange:|\{red:/g, '{blue:');
+            }
         }
         if (Array.isArray(cp.pages)) {
-            cp.pages.forEach(p => ensureCadencePageClean(p, isOrangeTeam));
+            cp.pages.forEach(p => ensureCadencePageClean(p, tone));
         }
         return cp;
     }
@@ -241,26 +323,44 @@
         const saved = publishedExtra !== undefined ? publishedExtra : readRawExtra();
         if (!saved) return base;
         const rawMemberList = saved.memberList || base.memberList;
-        const isOrangeTeam = /orange|hosei|法政/i.test(saved.opponent || '') ||
-            /orange|hosei|法政/i.test(saved.pdfFileName || '') ||
-            (Array.isArray(rawMemberList?.offRows) && rawMemberList.offRows.some(row =>
+
+        // 過去の誤判定（安東選手などを法政と誤認したオレンジ強制上書き）を自己修復
+        if (rawMemberList && (rawMemberList.numColor === '#e97132' || rawMemberList.numColor === '#e57229')) {
+            const hasRedTeamPlayer = (Array.isArray(rawMemberList.offRows) && rawMemberList.offRows.some(row =>
                 Array.isArray(row) && row.some(c =>
-                    /大場|⼤場|菊池|黒川|黑川|⿊川|安藤|金田|⾦⽥|江渕|脇田/.test(String(c?.name || '').normalize('NFKC')) ||
-                    (String(c?.num || '').trim() === '77' && String(c?.pos || '').trim() === 'LT')
+                    /宇野|風間|⾵間|佐藤|道浦|岩井|木庭|⽊庭|長内|⻑内|神鳥|小郷|安田/.test(String(c?.name || ''))
                 )
-            ));
-        if (isOrangeTeam && rawMemberList) {
-            rawMemberList.numColor = '#e97132';
+            )) || /早稲田|waseda|big\s*bears/i.test(saved.opponent || '') || /早稲田|waseda/i.test(saved.pdfFileName || '');
+            if (hasRedTeamPlayer) {
+                rawMemberList.numColor = '#ad181f';
+            }
         }
+
+        const currentNumColor = rawMemberList?.numColor || '#0432ff';
+        const colorTone = detectColorTone(currentNumColor);
+
         const rawDiagrams = Array.isArray(saved.playDiagrams) ? saved.playDiagrams : (base.playDiagrams || []);
-        const rawCadence = ensureCadencePageClean(saved.cadence || base.cadence, isOrangeTeam);
-        const rawCadencePages = (Array.isArray(saved.cadencePages) ? saved.cadencePages : (saved.cadence?.pages || [])).map(p => ensureCadencePageClean(p, isOrangeTeam));
+        const rawCadence = ensureCadencePageClean(saved.cadence || base.cadence, colorTone);
+        const rawCadencePages = (Array.isArray(saved.cadencePages) ? saved.cadencePages : (saved.cadence?.pages || [])).map(p => ensureCadencePageClean(p, colorTone));
         if (rawCadencePages.length > 0 && rawCadence) {
             rawCadence.headline = rawCadencePages[0].headline;
             rawCadence.items = rawCadencePages[0].items;
         }
+
+        let teamName = saved.teamName;
+        if (!teamName) {
+            teamName = extractTeamName(saved.pdfFileName, saved.opponent);
+        }
+        if (!teamName) {
+            const isWaseda = (Array.isArray(rawMemberList?.offRows) && rawMemberList.offRows.some(row =>
+                Array.isArray(row) && row.some(c => /宇野|風間|道浦|岩井|木庭|長内|安東/.test(String(c?.name || '')))
+            )) || /早稲田|waseda/i.test(saved.opponent || '') || /早稲田|waseda/i.test(saved.pdfFileName || '');
+            if (isWaseda) teamName = '早稲田';
+        }
+
         return {
             opponent: saved.opponent || base.opponent,
+            teamName: teamName || base.teamName || '',
             pdfFileName: saved.pdfFileName || null,
             memberList: rawMemberList,
             cadence: rawCadence,
@@ -274,6 +374,7 @@
         const current = getExtraData();
         const next = {
             opponent: partial.opponent !== undefined ? partial.opponent : current.opponent,
+            teamName: partial.teamName !== undefined ? partial.teamName : current.teamName,
             pdfFileName: partial.pdfFileName !== undefined ? partial.pdfFileName : current.pdfFileName,
             memberList: partial.memberList !== undefined ? partial.memberList : current.memberList,
             cadence: partial.cadence !== undefined ? partial.cadence : current.cadence,
@@ -1326,6 +1427,7 @@
 
         if (result.memberList || result.cadence || (result.playDiagrams && result.playDiagrams.length)) {
             result.pdfFileName = file.name;
+            result.teamName = extractTeamName(file.name, result.opponent);
             return saveExtraData(result);
         }
         throw new Error('PDF内に Member List, Cadence, または Play Diagram のページが見つかりませんでした。');
@@ -1340,7 +1442,7 @@
         return esc
             .replace(/\{blue:([\s\S]*?)\}/g, '<span class="txt-blue">$1</span>')
             .replace(/\{red:([\s\S]*?)\}/g, '<span class="txt-red">$1</span>')
-            .replace(/\{orange:([\s\S]*?)\}/g, '<span class="txt-orange" style="color:#e57229;font-weight:700;">$1</span>')
+            .replace(/\{orange:([\s\S]*?)\}/g, '<span class="txt-orange">$1</span>')
             .replace(/\n/g, '<br>');
     }
 
@@ -1349,6 +1451,7 @@
         getExtraData,
         saveExtraData,
         resetExtraData,
+        setTeamName: function(name) { return saveExtraData({ teamName: String(name || '').trim() }); },
         importFromPdfFile,
         compressExistingDiagrams,
         formatRichText
