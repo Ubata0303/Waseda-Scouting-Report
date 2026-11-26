@@ -777,9 +777,6 @@
     <div class="modal-bottom-bar" id="modal-bottom-bar"></div>
   </div>
 
-<script src="menu.js"></script>
-<script src="secure-data.js"></script>
-<script src="shared-data.js"></script>
 <script src="scouting-extra.js"></script>
 <script>
 "use strict";
@@ -804,7 +801,10 @@ function updateStatusText() {
 function loadDiagrams(customExtra) {
   if (!window.TBScoutingExtra) return;
   const extra = window.TBScoutingExtra.getExtraData(customExtra);
-  ALL_DIAGRAMS = Array.isArray(extra.playDiagrams) ? extra.playDiagrams : [];
+  const list = Array.isArray(extra.playDiagrams) ? extra.playDiagrams : [];
+  if (list.length > 0 || !ALL_DIAGRAMS.length) {
+    ALL_DIAGRAMS = list;
+  }
   updateStatusText();
 }
 
@@ -1094,7 +1094,7 @@ async function handleExcelFiles(files) {
       }
     }
 
-    loadDiagrams();
+    if (!ALL_DIAGRAMS.length) loadDiagrams();
     setupDataset({ plays: allPlays });
     updateStatusText();
   } catch (err) {
@@ -1626,5 +1626,8 @@ window.addEventListener("tb-extra-published", e => {
 loadDiagrams();
 initUIHandlers();
 </script>
+<script src="menu.js"></script>
+<script src="secure-data.js"></script>
+<script src="shared-data.js"></script>
 </body>
 </html>

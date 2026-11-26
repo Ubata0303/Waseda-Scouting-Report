@@ -285,7 +285,7 @@
         if (publishedPromise) return publishedPromise;
 
         publishedPromise = (async () => {
-            const isPlayPage = /(play|livereport)\.html/i.test(location.pathname);
+            const isPlayPage = /(play|livereport)/i.test(location.pathname) || !!document.getElementById('play-grid') || !!document.getElementById('clipsList');
             const saved = getSaved();
 
             // パスワード保存済みなら、通信を一切待たずにIndexedDBから即座（0.05秒）に復元

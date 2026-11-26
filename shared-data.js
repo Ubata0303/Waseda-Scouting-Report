@@ -288,8 +288,8 @@
                 window.__tbExtraMemory = idbVal;
                 try { window.name = WN_PREFIX + JSON.stringify(idbVal); } catch (e) {}
                 renderBanner();
-                window.dispatchEvent(new CustomEvent('tb-extra-published', { detail: idbVal }));
             }
+            window.dispatchEvent(new CustomEvent('tb-extra-published', { detail: window.__tbExtraMemory || idbVal }));
         });
     }
 
@@ -299,13 +299,16 @@
         if (!fileInput && !isExtraPage) return;
         try {
             const payload = await window.TBSecure.getPublished();
+            if (payload && payload.scoutingExtra) {
+                window.__tbExtraMemory = payload.scoutingExtra;
+            }
+            if (isExtraPage) {
+                window.dispatchEvent(new CustomEvent('tb-extra-published', { detail: payload.scoutingExtra || null }));
+            }
             if (fileInput) {
                 if (!payload.files || !payload.files.length) throw new Error('no files');
                 applyDdSettings(payload.ddSettings);
                 feed({ files: payload.files });
-            }
-            if (isExtraPage) {
-                window.dispatchEvent(new CustomEvent('tb-extra-published', { detail: payload.scoutingExtra || null }));
             }
             if (payload.exportedAt) {
                 const d = new Date(payload.exportedAt);
