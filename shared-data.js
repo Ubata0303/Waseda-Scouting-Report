@@ -294,23 +294,18 @@
     }
 
     async function feedFromPublished() {
-        const fileInput = document.querySelector('input[type="file"]:not([data-no-shared-feed])');
-        const isExtraPage = document.body.dataset.extraPage === 'true';
-        if (!fileInput && !isExtraPage) return;
         try {
             const payload = await window.TBSecure.getPublished();
             if (payload && payload.scoutingExtra) {
                 window.__tbExtraMemory = payload.scoutingExtra;
+                window.dispatchEvent(new CustomEvent('tb-extra-published', { detail: payload.scoutingExtra }));
             }
-            if (isExtraPage) {
-                window.dispatchEvent(new CustomEvent('tb-extra-published', { detail: payload.scoutingExtra || null }));
-            }
-            if (fileInput) {
-                if (!payload.files || !payload.files.length) throw new Error('no files');
+            const fileInput = document.querySelector('input[type="file"]:not([data-no-shared-feed])');
+            if (fileInput && payload && payload.files && payload.files.length) {
                 applyDdSettings(payload.ddSettings);
                 feed({ files: payload.files });
             }
-            if (payload.exportedAt) {
+            if (payload && payload.exportedAt) {
                 const d = new Date(payload.exportedAt);
                 renderBanner(`最終更新：${d.toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`);
             }

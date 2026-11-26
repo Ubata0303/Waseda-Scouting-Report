@@ -85,28 +85,37 @@
         let name = '';
         let color = '#ad181f';
         if (extra) {
-            name = String(extra.teamName || '').trim();
             const ml = extra.memberList || {};
             if (ml.numColor) color = ml.numColor;
-            if (!name) {
-                const target = String(extra.pdfFileName || '') + ' ' + String(extra.opponent || '');
-                if (/早稲田|waseda|big\s*bears/i.test(target)) name = '早稲田';
-                else if (/法政|hosei|orange/i.test(target)) name = '法政';
-                else if (/明治|meiji|griffins/i.test(target)) name = '明治';
-                else if (/立教|rikkyo|rikkyou|rushers/i.test(target)) name = '立教';
-                else if (/中央|chuo|chuuou|raccons|raccoons/i.test(target)) name = '中央';
-                else if (/日本体育|日体|nittai/i.test(target)) name = '日体大';
-                else if (/日本大学|日大|nihon|phoenix/i.test(target)) name = '日大';
-                else if (/慶應|慶応|keio|unicorns/i.test(target)) name = '慶應';
-                else if (/関西学院|関学|kwansei|kg|fighters/i.test(target)) name = '関学';
-                else if (/立命館|立命|rits|panthers/i.test(target)) name = '立命館';
-                else if (/関西大学|関大|kaisers/i.test(target)) name = '関大';
-                else if (/京都大学|京大|gangsters/i.test(target)) name = '京大';
-                else if (/神戸大学|神戸|ravens/i.test(target)) name = '神戸';
-            }
-            if (!name && Array.isArray(ml.offRows)) {
-                const isWaseda = ml.offRows.some(row => Array.isArray(row) && row.some(c => /宇野|風間|道浦|岩井|木庭|長内|安東/.test(String(c?.name || ''))));
-                if (isWaseda) name = '早稲田';
+
+            // 1. ロスター内の早稲田選手チェック（最優先）
+            const isWaseda = (Array.isArray(ml.offRows) && ml.offRows.some(row =>
+                Array.isArray(row) && row.some(c => /宇野|風間|道浦|岩井|木庭|長内|安東/.test(String(c?.name || '')))
+            )) || /早稲田|waseda|big\s*bears/i.test(String(extra.pdfFileName || '')) || /早稲田|waseda/i.test(String(extra.opponent || ''));
+
+            if (isWaseda) {
+                name = '早稲田';
+            } else {
+                name = String(extra.teamName || '').trim();
+                // 旧デフォルトの Fighters は無効化して再判定
+                if (name === 'Fighters' || !name) {
+                    const cleanOpp = (extra.opponent === '20261015 / Fighters') ? '' : String(extra.opponent || '');
+                    const target = String(extra.pdfFileName || '') + ' ' + cleanOpp;
+                    if (/早稲田|waseda|big\s*bears/i.test(target)) name = '早稲田';
+                    else if (/法政|hosei|orange/i.test(target)) name = '法政';
+                    else if (/明治|meiji|griffins/i.test(target)) name = '明治';
+                    else if (/立教|rikkyo|rikkyou|rushers/i.test(target)) name = '立教';
+                    else if (/中央|chuo|chuuou|raccons|raccoons/i.test(target)) name = '中央';
+                    else if (/日本体育|日体|nittai/i.test(target)) name = '日体大';
+                    else if (/日本大学|日大|nihon|phoenix/i.test(target)) name = '日大';
+                    else if (/慶應|慶応|keio|unicorns/i.test(target)) name = '慶應';
+                    else if (/関西学院|関学|kwansei|kg/i.test(target)) name = '関学';
+                    else if (/立命館|立命|rits|panthers/i.test(target)) name = '立命館';
+                    else if (/関西大学|関大|kaisers/i.test(target)) name = '関大';
+                    else if (/京都大学|京大|gangsters/i.test(target)) name = '京大';
+                    else if (/神戸大学|神戸|ravens/i.test(target)) name = '神戸';
+                    else if (name === 'Fighters') name = '';
+                }
             }
         }
         return { name, color };
@@ -143,6 +152,15 @@
     }
     setTimeout(() => updateTeamBadge(), 300);
     setTimeout(() => updateTeamBadge(), 1000);
+
+    // 閲覧アプリ（data.json）から直接非同期でチーム情報を取得して全ページで確実に表示
+    if (typeof window !== 'undefined' && window.TBSecure && window.TBSecure.getPublished) {
+        window.TBSecure.getPublished().then(payload => {
+            if (payload && payload.scoutingExtra) {
+                updateTeamBadge(payload.scoutingExtra);
+            }
+        }).catch(() => {});
+    }
 
     const overlay = document.createElement('div');
     overlay.className = 'tbm-overlay';

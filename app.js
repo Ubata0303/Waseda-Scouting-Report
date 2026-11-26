@@ -357,6 +357,10 @@ async function loadPublishedData() {
     const statusEl = document.getElementById('viewer-status');
     try {
         const payload = await window.TBSecure.getPublished();
+        if (payload && payload.scoutingExtra) {
+            window.__tbExtraMemory = payload.scoutingExtra;
+            window.dispatchEvent(new CustomEvent('tb-extra-published', { detail: payload.scoutingExtra }));
+        }
         rawGamesData = payload.games || [];
         if (payload.settings) applyDistanceSettings(payload.settings);
         processData();

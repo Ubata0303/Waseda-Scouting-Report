@@ -1,10 +1,10 @@
 // Tendency Breaker: Member List & Cadence 共通データ・PDF自動取り込み
 (function () {
     const DEFAULT_EXTRA = {
-        opponent: "20261015 / Fighters",
-        teamName: "Fighters",
+        opponent: "",
+        teamName: "",
         memberList: {
-            numColor: "#0432ff",
+            numColor: "#ad181f",
             offTitle: "OFF Member List",
             offRows: [
                 [
@@ -347,20 +347,22 @@
             rawCadence.items = rawCadencePages[0].items;
         }
 
+        // ロスター選手名やファイル名から早稲田を最優先で特定
+        const isWaseda = (Array.isArray(rawMemberList?.offRows) && rawMemberList.offRows.some(row =>
+            Array.isArray(row) && row.some(c => /宇野|風間|道浦|岩井|木庭|長内|安東/.test(String(c?.name || '')))
+        )) || /早稲田|waseda/i.test(saved.opponent || '') || /早稲田|waseda/i.test(saved.pdfFileName || '');
+
         let teamName = saved.teamName;
-        if (!teamName) {
-            teamName = extractTeamName(saved.pdfFileName, saved.opponent);
-        }
-        if (!teamName) {
-            const isWaseda = (Array.isArray(rawMemberList?.offRows) && rawMemberList.offRows.some(row =>
-                Array.isArray(row) && row.some(c => /宇野|風間|道浦|岩井|木庭|長内|安東/.test(String(c?.name || '')))
-            )) || /早稲田|waseda/i.test(saved.opponent || '') || /早稲田|waseda/i.test(saved.pdfFileName || '');
-            if (isWaseda) teamName = '早稲田';
+        if (isWaseda) {
+            teamName = '早稲田';
+        } else if (!teamName || teamName === 'Fighters') {
+            const cleanOpponent = (saved.opponent === '20261015 / Fighters') ? '' : (saved.opponent || '');
+            teamName = extractTeamName(saved.pdfFileName, cleanOpponent);
         }
 
         return {
             opponent: saved.opponent || base.opponent,
-            teamName: teamName || base.teamName || '',
+            teamName: teamName || '',
             pdfFileName: saved.pdfFileName || null,
             memberList: rawMemberList,
             cadence: rawCadence,
