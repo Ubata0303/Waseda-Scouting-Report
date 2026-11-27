@@ -12,7 +12,7 @@
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Live Report - Scouting Report</title>
+  <title>Dashboard - Scouting Report</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <style>
@@ -645,13 +645,12 @@
 </head>
 <body data-mode="viewer" data-extra-page="true">
   <nav class="tb-nav">
-    <a href="index.html">Dashboard</a>
+    <a href="livereport.html" class="active">Dashboard</a>
     <a href="passzone.html">Pass Zone</a>
-    <a href="dd.html">Down &amp; Distance</a>
-    <a href="livereport.html" class="active">Live Report</a>
     <a href="play.html">Play Diagram</a>
     <a href="member.html">Member List</a>
     <a href="cadence.html">Cadence</a>
+    <a href="index.html">Tendency</a>
   </nav>
 
   <!-- 共有データ自動流し込み用の隠しファイル入力（複数試合Excel対応） -->
@@ -661,7 +660,7 @@
   <div class="page-container">
     <div class="page-header">
       <div class="page-title-group">
-        <h1>Live Report</h1>
+        <h1>Dashboard</h1>
         <p>複数条件の掛け合わせ・フォーメーション選択によるリアルタイム傾向分析</p>
       </div>
       <div class="status-header">
@@ -749,7 +748,7 @@
 
       <!-- Insight Box -->
       <div class="insight-stripe" id="insightBox">
-        Dashboardで読み込んだExcelデータがここに自動反映されます。
+        Tendencyで読み込んだExcelデータがここに自動反映されます。
       </div>
 
       <!-- 2x2 Tables Box -->
@@ -1380,7 +1379,7 @@ function updateKPIs(plays) {
 function updateInsight(plays) {
   const box = document.getElementById("insightBox");
   if (!plays.length) {
-    box.innerHTML = "該当データがありません。フィルター条件を緩和するか、DashboardでExcelデータを読み込んでください。";
+    box.innerHTML = "該当データがありません。フィルター条件を緩和するか、TendencyでExcelデータを読み込んでください。";
     return;
   }
   const heavy = plays.filter(p => p.family === "heavy");

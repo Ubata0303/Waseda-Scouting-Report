@@ -2,13 +2,12 @@
 // 画面上部に固定バー（≡ ボタン＋アプリ名＋今の画面名）を置き、≡ を押すと左から画面一覧が開く
 (function () {
     const PAGES = [
-        { href: 'index.html', label: 'Dashboard' },
+        { href: 'livereport.html', label: 'Dashboard' },
         { href: 'passzone.html', label: 'Pass Zone' },
-        { href: 'dd.html', label: 'Down & Distance' },
-        { href: 'livereport.html', label: 'Live Report' },
         { href: 'play.html', label: 'Play Diagram' },
         { href: 'member.html', label: 'Member List' },
-        { href: 'cadence.html', label: 'Cadence' }
+        { href: 'cadence.html', label: 'Cadence' },
+        { href: 'index.html', label: 'Tendency' }
     ];
     // Netlify は /passzone のような拡張子なしURLでも開けるので、ファイル名の先頭で判定する
     const path = location.pathname.split('/').pop() || 'index.html';
