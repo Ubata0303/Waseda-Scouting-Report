@@ -692,7 +692,8 @@
             <span class="filter-name">Down</span>
             <button class="pill" data-group="down" data-value="1">1st</button>
             <button class="pill" data-group="down" data-value="2">2nd</button>
-            <button class="pill" data-group="down" data-value="3,4">3rd / 4th</button>
+            <button class="pill" data-group="down" data-value="3">3rd</button>
+            <button class="pill" data-group="down" data-value="4">4th</button>
           </div>
 
           <div class="filter-section">
@@ -1317,7 +1318,8 @@ function filterPlays() {
       let ok = false;
       if (FILTER_STATE.downs.has("1") && p.dn === 1) ok = true;
       if (FILTER_STATE.downs.has("2") && p.dn === 2) ok = true;
-      if (FILTER_STATE.downs.has("3,4") && (p.dn === 3 || p.dn === 4)) ok = true;
+      if (FILTER_STATE.downs.has("3") && p.dn === 3) ok = true;
+      if (FILTER_STATE.downs.has("4") && p.dn === 4) ok = true;
       if (!ok) return false;
     }
 
