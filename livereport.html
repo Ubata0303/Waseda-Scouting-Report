@@ -1404,9 +1404,12 @@ function updateDDTable(plays) {
     { label: "2nd & short", fn: p => p.dn === 2 && p.dist !== null && p.dist <= 3 },
     { label: "2nd & medium", fn: p => p.dn === 2 && p.dist !== null && p.dist >= 4 && p.dist <= 6 },
     { label: "2nd & long", fn: p => p.dn === 2 && p.dist !== null && p.dist >= 7 },
-    { label: "3rd/4th & short", fn: p => (p.dn === 3 || p.dn === 4) && p.dist !== null && p.dist <= 3 },
-    { label: "3rd/4th & medium", fn: p => (p.dn === 3 || p.dn === 4) && p.dist !== null && p.dist >= 4 && p.dist <= 6 },
-    { label: "3rd/4th & long", fn: p => (p.dn === 3 || p.dn === 4) && p.dist !== null && p.dist >= 7 }
+    { label: "3rd & short", fn: p => p.dn === 3 && p.dist !== null && p.dist <= 3 },
+    { label: "3rd & medium", fn: p => p.dn === 3 && p.dist !== null && p.dist >= 4 && p.dist <= 6 },
+    { label: "3rd & long", fn: p => p.dn === 3 && p.dist !== null && p.dist >= 7 },
+    { label: "4th & short", fn: p => p.dn === 4 && p.dist !== null && p.dist <= 3 },
+    { label: "4th & medium", fn: p => p.dn === 4 && p.dist !== null && p.dist >= 4 && p.dist <= 6 },
+    { label: "4th & long", fn: p => p.dn === 4 && p.dist !== null && p.dist >= 7 }
   ];
 
   const html = configs.map(c => {
