@@ -7,11 +7,11 @@
         { href: 'play.html', label: 'Play Diagram' },
         { href: 'member.html', label: 'Member List' },
         { href: 'cadence.html', label: 'Cadence' },
-        { href: 'index.html', label: 'Tendency' }
+        { href: 'index.html?view=tendency', label: 'Tendency' }
     ];
     // Netlify は /passzone のような拡張子なしURLでも開けるので、ファイル名の先頭で判定する
     const path = location.pathname.split('/').pop() || 'index.html';
-    const current = PAGES.find(p => p.href.replace('.html', '') === path.replace('.html', '')) || PAGES[0];
+    const current = PAGES.find(p => p.href.split('?')[0].replace('.html', '') === path.replace('.html', '')) || PAGES[0];
 
     const css = `
     .sidebar, .tb-nav { display: none !important; }
